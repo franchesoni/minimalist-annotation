@@ -4,15 +4,17 @@
     overflow: hidden;
     color: white;
 }
+
 #logo-img {
-    width: 100px;
+    width: 300px;
 }
+
 #zoom-container {
     display: flex;
     align-items: center;
     justify-content: center;
-
 }
+
 body {
     text-align: center;
     margin: 0; /* Supprimez la marge par défaut du corps */

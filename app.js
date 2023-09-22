@@ -16,6 +16,35 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastMouseX = 0;
     let lastMouseY = 0;
 
+    function pixelateImage(image, pixelSize) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const width = image.width;
+        const height = image.height;
+
+        // Définir les dimensions du canvas en fonction de la taille des pixels
+        canvas.width = width;
+        canvas.height = height;
+
+        // Dessiner l'image sur le canvas
+        ctx.drawImage(image, 0, 0, width, height);
+
+        // Effectuer la pixelisation
+        ctx.mozImageSmoothingEnabled = false;
+        ctx.webkitImageSmoothingEnabled = false;
+        ctx.msImageSmoothingEnabled = false;
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(canvas, 0, 0, width / pixelSize, height / pixelSize);
+
+        // Redimensionner l'image pour obtenir l'effet pixelisé
+        ctx.drawImage(canvas, 0, 0, width / pixelSize, height / pixelSize, 0, 0, width, height);
+
+        // Créer une nouvelle image avec l'effet de pixelisation
+        const pixelatedImage = new Image();
+        pixelatedImage.src = canvas.toDataURL('image/png');
+        return pixelatedImage;
+    }
+
     function drawImage() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(image, offsetX, offsetY, image.width * scale, image.height * scale);
@@ -90,6 +119,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 canvas.width = maxWidth;
                 canvas.height = maxHeight;
 
+                const pixelSize = 1;
+                image = pixelateImage(image, pixelSize);
                 // Draw the image at the correct scale
                 drawImage();
             };
