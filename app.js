@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadForm = document.getElementById('uploadForm');
     const imageInput = document.getElementById('imageInput');
     const coordinates = document.getElementById('coordinates');
+    const saveCropButton = document.getElementById('save-crop')
     const mouseCoordinates = document.getElementById('mouse-coordinates');
     const ctx = canvas.getContext('2d');
 
@@ -15,6 +16,19 @@ document.addEventListener('DOMContentLoaded', () => {
     let mouseDown = false;
     let lastMouseX = 0;
     let lastMouseY = 0;
+    let cropCoordonnates = 0;
+    let pixelization = 0;
+
+    async function sendImage(file) {
+        const formData = new FormData();
+        formData.append('file',file)
+        const res = await fetch ('http://localhost:8008/uploadImage', {
+            method: 'POST',
+            body: formData
+        })
+        const response = await res.json();
+        console.log(response);
+    }
 
     function pixelateImage(image, pixelSize) {
         const canvas = document.createElement('canvas');
@@ -58,7 +72,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const bottomRightY = topLeftY + canvas.height / scale;
 
         // Update the displayed coordinates
+        cropCoordonnates = `${topLeftX.toFixed(0)}, ${topLeftY.toFixed(0)}, ${bottomRightX.toFixed(0)}, ${bottomRightY.toFixed(0)}`
         coordinates.textContent = `Top Left: (${topLeftX.toFixed(2)}, ${topLeftY.toFixed(2)}) | Bottom Right: (${bottomRightX.toFixed(2)}, ${bottomRightY.toFixed(2)})`;
+        
     }
 
     function zoomToMouse(mouseX, mouseY, delta) {
@@ -96,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('No image selected.');
             return;
         }
-
+        sendImage(selectedImage)
         // Load the selected image into the canvas
         const reader = new FileReader();
         reader.onload = (event) => {
@@ -119,8 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 canvas.width = maxWidth;
                 canvas.height = maxHeight;
 
-                const pixelSize = 1;
-                image = pixelateImage(image, pixelSize);
+                image = pixelateImage(image, pixelization);
                 // Draw the image at the correct scale
                 drawImage();
             };
@@ -194,4 +209,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log(`Clic à (${imageX.toFixed(2)}, ${imageY.toFixed(2)})`);
     });
+    saveCropButton.addEventListener('click', async (event)  => {
+        const res = await fetch ('http://localhost:8008/saveCrop', {
+            method: 'POST',
+            body: JSON.stringify({
+                crop : cropCoordonnates
+            })
+        })
+        const response = await res.json();
+        console.log(response);
+    })
 });
