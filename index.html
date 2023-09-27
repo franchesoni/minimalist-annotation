@@ -13,18 +13,16 @@
     <div id="App">
         <img src="front_images/logoBorelli.png" id="logo-img"> </img>
         <h1>Minimalist Annotation App</h1>
-        <form id="uploadForm">
-            <input type="file" id="imageInput" accept="image/*">
-            <input type="submit" value="Charger l'image">
-        </form>
         <div id="mouse-coordinates"></div>
-        <div>
-            <div id="coordinates">Coordonnées : (0, 0)</div>
+        <div id="coordinates">Coordonnées : (0, 0)</div>
+        <div id="button-container">
+            <button id="previous-button">Prev</button>
+            <button id="next-button">Next</button>
             <button id="save-crop">Save crop</button>
         </div>
         
         <div id="canvas-container">
-            <canvas id="zoomable-canvas" width="800" height="800"></canvas>
+            <canvas id="zoomable-canvas" width="800" height="500"></canvas>
         </div>
     </div>
 </body>

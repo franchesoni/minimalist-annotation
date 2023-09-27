@@ -1,13 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
     const canvasContainer = document.getElementById('canvas-container');
     const canvas = document.getElementById('zoomable-canvas');
-    const uploadForm = document.getElementById('uploadForm');
-    const imageInput = document.getElementById('imageInput');
     const coordinates = document.getElementById('coordinates');
     const saveCropButton = document.getElementById('save-crop')
     const mouseCoordinates = document.getElementById('mouse-coordinates');
-    const ctx = canvas.getContext('2d');
 
+    const prevButton = document.getElementById('previous-button');
+    const nextButton = document.getElementById('next-button');
+
+    const ctx = canvas.getContext('2d');
+    
+    const apiAddress = 'http://localhost:8008'
     let image = new Image();
     let scale = 1;
     let maxScale = 0;
@@ -17,48 +20,107 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastMouseX = 0;
     let lastMouseY = 0;
     let cropCoordonnates = 0;
-    let pixelization = 0;
-    let isDrawing = false;
-    let startX, startY, endX, endY, startImageX, startImageY, endImageX, endImageY;
+    let indexImage = 0
+    let nbImages = 0
+    
+    async function getFirstImageURL() {
+        const res = await fetch(`${apiAddress}/getFirstImage`, {
+            headers: {
+              'Cache-Control': 'no-cache',
+            },
+          });
+        // Ensure the response is successful before proceeding
+        if (res.ok) {
+            // Get the image URL from the response
+            const imageUrl = URL.createObjectURL(await res.blob());
+            nbImages = res.headers.get('nbImages')
+            console.log(nbImages)
+            return imageUrl;
+        } else {
+            // Handle errors, for example, return null in case of an error
+            return null;
+        }
+    }
 
+    async function getNextImageURL() {
+        const res = await fetch(`${apiAddress}/getNextImage`, {
+            headers: {
+              'Cache-Control': 'no-cache',
+            },
+          });
+        // Ensure the response is successful before proceeding
+        if (res.ok) {
+            // Get the image URL from the response
+            const imageUrl = URL.createObjectURL(await res.blob());
+            return imageUrl;
+        } else {
+            // Handle errors, for example, return null in case of an error
+            return null;
+        }
+    }
+
+    async function getPrevImageURL() {
+        const res = await fetch(`${apiAddress}/getPrevImage`, {
+            headers: {
+              'Cache-Control': 'no-cache',
+            },
+          });
+        // Ensure the response is successful before proceeding
+        if (res.ok) {
+            // Get the image URL from the response
+            const imageUrl = URL.createObjectURL(await res.blob());
+            return imageUrl;
+        } else {
+            // Handle errors, for example, return null in case of an error
+            return null;
+        }
+    }
+
+    async function loadFirstImage() {
+        const firstImageURL = await getFirstImageURL();
+        if (firstImageURL) {
+            loadImage(firstImageURL)
+            // The rest of the code to load and display the image
+        } else {
+            // Handle the case where no image is available
+            console.log("No image available.");
+        }
+    }
+
+    function loadImage(imageURL) {
+        image.src = imageURL;
+        console.log(image.src)
+            image.onload = () => {
+                // Calculate the maximum dimensions for the canvas
+                const maxWidth = canvasContainer.clientWidth;
+                const maxHeight = canvasContainer.clientHeight;
+
+                // Calculate the initial maximum scale
+                scale = Math.min(maxWidth / image.width, maxHeight / image.height);
+                maxScale = scale;
+
+                // Reset the offset parameters
+                offsetX = 0;
+                offsetY = 0;
+
+                // Apply the dimensions to the canvas without changing the scale
+                canvas.width = maxWidth;
+                canvas.height = maxHeight;
+
+                // Draw the image at the correct scale
+                drawImage();
+            };
+    }
+    
     async function sendImage(file) {
         const formData = new FormData();
         formData.append('file',file)
-        const res = await fetch ('http://localhost:8008/uploadImage', {
+        const res = await fetch (`${apiAddress}/uploadImage`, {
             method: 'POST',
             body: formData
         })
         const response = await res.json();
         console.log(response);
-    }
-
-    function pixelateImage(image, pixelSize) {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const width = image.width;
-        const height = image.height;
-
-        // Définir les dimensions du canvas en fonction de la taille des pixels
-        canvas.width = width;
-        canvas.height = height;
-
-        // Dessiner l'image sur le canvas
-        ctx.drawImage(image, 0, 0, width, height);
-
-        // Effectuer la pixelisation
-        ctx.mozImageSmoothingEnabled = false;
-        ctx.webkitImageSmoothingEnabled = false;
-        ctx.msImageSmoothingEnabled = false;
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(canvas, 0, 0, width / pixelSize, height / pixelSize);
-
-        // Redimensionner l'image pour obtenir l'effet pixelisé
-        ctx.drawImage(canvas, 0, 0, width / pixelSize, height / pixelSize, 0, 0, width, height);
-
-        // Créer une nouvelle image avec l'effet de pixelisation
-        const pixelatedImage = new Image();
-        pixelatedImage.src = canvas.toDataURL('image/png');
-        return pixelatedImage;
     }
 
     function drawImage() {
@@ -102,47 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
         drawImage();
     }
 
-    uploadForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-
-        // Get the image file selected by the user
-        const selectedImage = imageInput.files[0];
-
-        if (!selectedImage) {
-            alert('No image selected.');
-            return;
-        }
-        sendImage(selectedImage)
-        // Load the selected image into the canvas
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            image.src = event.target.result;
-
-            image.onload = () => {
-                // Calculate the maximum dimensions for the canvas
-                const maxWidth = canvasContainer.clientWidth;
-                const maxHeight = canvasContainer.clientHeight;
-
-                // Calculate the initial maximum scale
-                scale = Math.min(maxWidth / image.width, maxHeight / image.height);
-                maxScale = scale;
-
-                // Reset the offset parameters
-                offsetX = 0;
-                offsetY = 0;
-
-                // Apply the dimensions to the canvas without changing the scale
-                canvas.width = maxWidth;
-                canvas.height = maxHeight;
-
-                image = pixelateImage(image, pixelization);
-                // Draw the image at the correct scale
-                drawImage();
-            };
-        };
-
-        reader.readAsDataURL(selectedImage);
-    });
+    loadFirstImage();
 
     canvas.addEventListener('mousedown', (e) => {
         mouseDown = true;
@@ -185,29 +207,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Display the coordinates in the console in real-time
         mouseCoordinates.textContent = `Mouse: (${imageX.toFixed(2)}, ${imageY.toFixed(2)})`;
-
-        if (isDrawing) {
-            // Mise à jour des coordonnées finales pendant le déplacement de la souris
-            endX = e.clientX - canvas.getBoundingClientRect().left;
-            endY = e.clientY - canvas.getBoundingClientRect().top;
-    
-            // Effacez le contenu précédent du canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-            // Calculez les coordonnées du point en haut à gauche et du point en bas à droite
-            const topLeftX = Math.min(startX, endX);
-            const topLeftY = Math.min(startY, endY);
-            const bottomRightX = Math.max(startX, endX);
-            const bottomRightY = Math.max(startY, endY);
-    
-            // Dessinez le rectangle actuel en temps réel
-            ctx.strokeStyle = 'red'; // Couleur du rectangle (rouge)
-            ctx.lineWidth = 2; // Épaisseur de la ligne
-            ctx.strokeRect(topLeftX, topLeftY, bottomRightX - topLeftX, bottomRightY - topLeftY);
-        }
     });
 
     canvas.addEventListener('wheel', (e) => {
+        e.preventDefault()
         const zoomSpeed = 0.001; // Adjust the zoom speed as needed
         const zoomDelta = e.deltaY * zoomSpeed;
 
@@ -217,20 +220,24 @@ document.addEventListener('DOMContentLoaded', () => {
         zoomToMouse(mouseX, mouseY, zoomDelta);
     });
 
-    // Add click event listener to display coordinates in the console
+    // Add a click event listener to display coordinates in the console
     canvas.addEventListener('click', (event) => {
-        // Obtenez les coordonnées du clic par rapport au canvas
-        const clickX = event.clientX - canvas.getBoundingClientRect().left;
-        const clickY = event.clientY - canvas.getBoundingClientRect().top;
+        if (event.button == 0) {
+            // Get the click coordinates relative to the canvas
+            const clickX = event.clientX - canvas.getBoundingClientRect().left;
+            const clickY = event.clientY - canvas.getBoundingClientRect().top;
 
-        // Calculez les coordonnées réelles dans l'image, en tenant compte de l'échelle et des offsets
-        const imageX = (clickX - offsetX) / scale;
-        const imageY = (clickY - offsetY) / scale;
+            // Calculate the real coordinates in the image, taking into account the scale and offsets
+            const imageX = (clickX - offsetX) / scale;
+            const imageY = (clickY - offsetY) / scale;
 
-        console.log(`Clic à (${imageX.toFixed(2)}, ${imageY.toFixed(2)})`);
+            console.log(`Click at (${imageX.toFixed(2)}, ${imageY.toFixed(2)})`);
+        }
+        
     });
+
     saveCropButton.addEventListener('click', async (event)  => {
-        const res = await fetch ('http://localhost:8008/saveCrop', {
+        const res = await fetch (`${apiAddress}/saveCrop`, {
             method: 'POST',
             body: JSON.stringify({
                 crop : cropCoordonnates
@@ -239,41 +246,42 @@ document.addEventListener('DOMContentLoaded', () => {
         const response = await res.json();
         console.log(response);
     })
-    canvas.addEventListener('contextmenu', (e) => {
-    e.preventDefault(); // Empêche le menu contextuel de s'ouvrir
 
-    if (!isDrawing) {
-        // Premier clic droit, enregistrez les coordonnées de départ
-        startX = e.clientX - canvas.getBoundingClientRect().left;
-        startY = e.clientY - canvas.getBoundingClientRect().top;
+    prevButton.addEventListener('click', () => {
+        if (indexImage==0) {
+            alert("No previous image")
+            return
+        }
+        async function loadPrevImage() {
+            const prevImageUrl = await getPrevImageURL()
+            if (prevImageUrl) {
+                loadImage(prevImageUrl)
+                // The rest of the code to load and display the image
+            } else {
+                // Handle the case where no image is available
+                console.log("No image available.");
+            }
+        }
+        loadPrevImage()
+        indexImage -=1
+    })
 
-        startImageX = (startX - offsetX) / scale;
-        startImageY = (startY - offsetY) / scale;
-
-        isDrawing = true;
-    } else {
-        // Deuxième clic droit, enregistrez les coordonnées d'arrêt
-        endX = e.clientX - canvas.getBoundingClientRect().left;
-        endY = e.clientY - canvas.getBoundingClientRect().top;
-
-        endImageX = (endX - offsetX) / scale;
-        endImageY = (endY - offsetY) / scale;
-        isDrawing = false;
-
-        // Calculez les coordonnées du point en haut à gauche et du point en bas à droite
-        const topLeftX = Math.min(startImageX, endImageX);
-        const topLeftY = Math.min(startImageY, endImageY);
-        const bottomRightX = Math.max(startImageX, endImageX);
-        const bottomRightY = Math.max(startImageY, endImageY);
-
-        // Dessinez le rectangle sur l'image
-        ctx.strokeStyle = 'red'; // Couleur du rectangle (rouge)
-        ctx.lineWidth = 2; // Épaisseur de la ligne
-        ctx.strokeRect(topLeftX, topLeftY, bottomRightX - topLeftX, bottomRightY - topLeftY);
-
-        // Affichez les coordonnées de la boîte
-        console.log(`Top Left: (${topLeftX.toFixed(2)}, ${topLeftY.toFixed(2)})`);
-        console.log(`Bottom Right: (${bottomRightX.toFixed(2)}, ${bottomRightY.toFixed(2)})`);
-    }
-});
+    nextButton.addEventListener('click', () => {
+        if (indexImage==nbImages-1) {
+            alert("No next image")
+            return
+        }
+        async function loadNextImage() {
+            const nextImageUrl = await getNextImageURL()
+            if (nextImageUrl) {
+                loadImage(nextImageUrl)
+                // The rest of the code to load and display the image
+            } else {
+                // Handle the case where no image is available
+                console.log("No image available.");
+            }
+        }
+        loadNextImage()
+        indexImage +=1
+    })
 });
