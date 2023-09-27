@@ -1,5 +1,5 @@
-#canvas-container {
-    width: 800px;
+#canvasContainer {
+    width: 1200px;
     height: 800px;
     overflow: hidden;
     color: white;
@@ -28,4 +28,9 @@ body {
     font-family: 'Poppins', sans-serif;
     background-color: #282c34;
     color: white;
+}
+#button-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }

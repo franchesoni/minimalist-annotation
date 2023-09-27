@@ -8,6 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const coordinates = document.getElementById('coordinates');
     const saveCropButton = document.getElementById('save-crop')
     const mouseCoordinates = document.getElementById('mouse-coordinates');
+
+    const prevButton = document.getElementById('previous-button');
+    const nextButton = document.getElementById('next-button');
+
     const transparencySlider = document.getElementById('transparency');
     const imgCtx = imgCanvas.getContext('2d');
     const annCtx = annCanvas.getContext('2d');
@@ -16,8 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const annHolderCtx = annHolderCanvas.getContext('2d');
     const maxWidth = 800
     const maxHeight = 800
+    const apiAddress = 'http://127.0.0.1:8008'
 
-    // initialization of variables
+    // initialization of variables    
     let image = new Image();
     let scale = 1;
     let maxScale = 0;
@@ -27,14 +32,102 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastMouseX = 0;
     let lastMouseY = 0;
     let cropCoordinates = 0;
+    let indexImage = 0
+    let nbImages = 0
+    
+    async function getFirstImageURL() {
+        const res = await fetch(`${apiAddress}/getFirstImage`, {
+            headers: {
+              'Cache-Control': 'no-cache',
+            },
+          });
+        // Ensure the response is successful before proceeding
+        if (res.ok) {
+            // Get the image URL from the response
+            const imageUrl = URL.createObjectURL(await res.blob());
+            nbImages = res.headers.get('nbImages')
+            console.log(nbImages)
+            return imageUrl;
+        } else {
+            // Handle errors, for example, return null in case of an error
+            return null;
+        }
+    }
 
+    async function getNextImageURL() {
+        const res = await fetch(`${apiAddress}/getNextImage`, {
+            headers: {
+              'Cache-Control': 'no-cache',
+            },
+          });
+        // Ensure the response is successful before proceeding
+        if (res.ok) {
+            // Get the image URL from the response
+            const imageUrl = URL.createObjectURL(await res.blob());
+            return imageUrl;
+        } else {
+            // Handle errors, for example, return null in case of an error
+            return null;
+        }
+    }
 
-    // <<<<<<<<<<<<<<<<<< API functions >>>>>>>>>>>>>>>>>>>>>>
-    // frontend sends image to backend
+    async function getPrevImageURL() {
+        const res = await fetch(`${apiAddress}/getPrevImage`, {
+            headers: {
+              'Cache-Control': 'no-cache',
+            },
+          });
+        // Ensure the response is successful before proceeding
+        if (res.ok) {
+            // Get the image URL from the response
+            const imageUrl = URL.createObjectURL(await res.blob());
+            return imageUrl;
+        } else {
+            // Handle errors, for example, return null in case of an error
+            return null;
+        }
+    }
+
+    async function loadFirstImage() {
+        const firstImageURL = await getFirstImageURL();
+        if (firstImageURL) {
+            loadImage(firstImageURL)
+            // The rest of the code to load and display the image
+        } else {
+            // Handle the case where no image is available
+            console.log("No image available.");
+        }
+    }
+
+    function loadImage(imageURL) {
+        image.src = imageURL;
+        console.log(image.src)
+            image.onload = () => {
+                // Calculate the maximum dimensions for the canvas
+                const maxWidth = canvasContainer.clientWidth;
+                const maxHeight = canvasContainer.clientHeight;
+
+                // Calculate the initial maximum scale
+                scale = Math.min(maxWidth / image.width, maxHeight / image.height);
+                maxScale = scale;
+
+                // Reset the offset parameters
+                offsetX = 0;
+                offsetY = 0;
+
+                // Apply the dimensions to the canvas without changing the scale
+                canvas.width = maxWidth;
+                canvas.height = maxHeight;
+
+                // Draw the image at the correct scale
+                drawImage();
+            };
+    }
+    
     async function sendImage(file) {
         const formData = new FormData();
         formData.append('file', file)
-        const res = await fetch('http://localhost:8008/uploadImage', {
+        const res = await fetch ('http://localhost:8008/uploadImage', {
             method: 'POST',
             body: formData
         })
@@ -51,52 +144,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const response = await res.json();
         console.log(response);
     }
-
-
-
-
-    // <<<<<<<<<<<<<<<<<<<<< UPLOAD/SAVECROP button >>>>>>>>>>>>>>>>>>>
-    uploadForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-
-        // Get the image file selected by the user
-        const selectedImage = imageInput.files[0];
-
-        if (!selectedImage) {
-            alert('No image selected.');
-            return;
-        }
-        sendImage(selectedImage)
-        // Load the selected image into the canvas
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            image.src = event.target.result;
-
-            image.onload = () => {
-                // Calculate the initial maximum scale
-                scale = Math.min(maxWidth / image.width, maxHeight / image.height);
-                maxScale = scale;
-
-                // Reset the offset parameters
-                offsetX = 0;
-                offsetY = 0;
-
-                // Apply the dimensions to the canvas without changing the scale
-                imgCanvas.width = maxWidth;
-                imgCanvas.height = maxHeight;
-                annCanvas.width = maxWidth;
-                annCanvas.height = maxHeight;
-                annHolderCanvas.width = image.width;
-                annHolderCanvas.height = image.height;
-
-                // Draw the image at the correct scale
-                drawImage();
-                drawAnnotation();
-            };
-        };
-
-        reader.readAsDataURL(selectedImage);
-    });
 
     saveCropButton.addEventListener('click', async (event) => {
         saveCrop(cropCoordinates)
@@ -136,6 +183,9 @@ document.addEventListener('DOMContentLoaded', () => {
     transparencySlider.addEventListener('input', function () {
         drawAnnotation();
     });
+
+
+    loadFirstImage();
 
     // <<<<<<<<<<<<<<<<<< INTERACTIONS, ZOOM and PAD >>>>>>>>>>>>>>>>>>>>>>
     annCanvas.addEventListener('mousedown', (e) => {
@@ -211,6 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     annCanvas.addEventListener('wheel', (e) => {
+        e.preventDefault()
         const zoomSpeed = 0.001; // Adjust the zoom speed as needed
         const zoomDelta = e.deltaY * zoomSpeed;
 
@@ -220,28 +271,71 @@ document.addEventListener('DOMContentLoaded', () => {
         zoomToMouse(mouseX, mouseY, zoomDelta);
     });
 
-    // Add click event listener to display coordinates in the console
+    // Add a click event listener to display coordinates in the console
     annCanvas.addEventListener('mousedown', (event) => {
-        // Obtenez les coordonnées du clic par rapport au canvas
-        const clickX = event.clientX - imgCanvas.getBoundingClientRect().left;
-        const clickY = event.clientY - imgCanvas.getBoundingClientRect().top;
+        if (event.button == 0) {
+            // Get the click coordinates relative to the canvas
+            const clickX = event.clientX - imgCanvas.getBoundingClientRect().left;
+            const clickY = event.clientY - imgCanvas.getBoundingClientRect().top;
 
-        // Calculez les coordonnées réelles dans l'image, en tenant compte de l'échelle et des offsets
-        const imageX = (clickX - offsetX) / scale;
-        const imageY = (clickY - offsetY) / scale;
+            // Calculate the real coordinates in the image, taking into account the scale and offsets
+            const imageX = (clickX - offsetX) / scale;
+            const imageY = (clickY - offsetY) / scale;
 
-        console.log(`Clic à (${imageX.toFixed(2)}, ${imageY.toFixed(2)})`);
-        if (event.button === 0) {
-            // Drawing an annotation on the annotation canvas
-            annHolderCtx.strokeStyle = 'red';
-            annHolderCtx.strokeRect(imageX, imageY, 50, 50);
-        } else if (event.button === 2) {
-            // Removing an annotation from the annotation canvas
-            annHolderCtx.clearRect(0, 0, annHolderCanvas.width, annHolderCanvas.height);
+            console.log(`Click at (${imageX.toFixed(2)}, ${imageY.toFixed(2)})`);
         }
-        drawAnnotation()
-
+        
     });
+
+    saveCropButton.addEventListener('click', async (event)  => {
+        const res = await fetch (`${apiAddress}/saveCrop`, {
+            method: 'POST',
+            body: JSON.stringify({
+                crop : cropCoordonnates
+            })
+        })
+        const response = await res.json();
+        console.log(response);
+    })
+
+    prevButton.addEventListener('click', () => {
+        if (indexImage==0) {
+            alert("No previous image")
+            return
+        }
+        async function loadPrevImage() {
+            const prevImageUrl = await getPrevImageURL()
+            if (prevImageUrl) {
+                loadImage(prevImageUrl)
+                // The rest of the code to load and display the image
+            } else {
+                // Handle the case where no image is available
+                console.log("No image available.");
+            }
+        }
+        loadPrevImage()
+        indexImage -=1
+    })
+
+    nextButton.addEventListener('click', () => {
+        if (indexImage==nbImages-1) {
+            alert("No next image")
+            return
+        }
+        async function loadNextImage() {
+            const nextImageUrl = await getNextImageURL()
+            if (nextImageUrl) {
+                loadImage(nextImageUrl)
+                // The rest of the code to load and display the image
+            } else {
+                // Handle the case where no image is available
+                console.log("No image available.");
+            }
+        }
+        loadNextImage()
+        indexImage +=1
+    })
+
     annCanvas.addEventListener('contextmenu', (e) => {
         e.preventDefault();
     });
