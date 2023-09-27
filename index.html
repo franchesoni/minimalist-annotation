@@ -24,11 +24,21 @@
             <div id="coordinates">Coordonnées : (0, 0)</div>
             <button id="save-crop">Save crop</button>
         </div>
+        <label for="transparency">Transparency: </label>
+        <input type="range" id="transparency" min="0" max="1" step="0.01" value="1">
 
-        <div id="canvas-container">
-            <canvas id="zoomable-canvas" width="800" height="800"></canvas>
+        <div id="canvasContainer" style="position: relative;">
+            <canvas id="imgCanvas" width="800" height="800"
+                style="position: absolute; top: 0; left: 0; z-index: 1;"></canvas>
+            <canvas id="annCanvas" width="800" height="800"
+                style="position: absolute; top: 0; left: 0; z-index: 2;"></canvas>
+
         </div>
+
+
     </div>
+
+
 </body>
 
 </html>
