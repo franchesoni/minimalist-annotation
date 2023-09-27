@@ -103,10 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
         image.src = imageURL;
         console.log(image.src)
             image.onload = () => {
-                // Calculate the maximum dimensions for the canvas
-                const maxWidth = canvasContainer.clientWidth;
-                const maxHeight = canvasContainer.clientHeight;
-
                 // Calculate the initial maximum scale
                 scale = Math.min(maxWidth / image.width, maxHeight / image.height);
                 maxScale = scale;
@@ -116,18 +112,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 offsetY = 0;
 
                 // Apply the dimensions to the canvas without changing the scale
-                canvas.width = maxWidth;
-                canvas.height = maxHeight;
+                imgCanvas.width = maxWidth;
+                imgCanvas.height = maxHeight;
+                annCanvas.width = maxWidth;
+                annCanvas.height = maxHeight;
+                annHolderCanvas.width = image.width;
+                annHolderCanvas.height = image.height;
 
                 // Draw the image at the correct scale
                 drawImage();
+                drawAnnotation();
             };
     }
+
+
+    /////////
+
+
+
+    // <<<<<<<<<<<<<<<<<<<<< UPLOAD/SAVECROP button >>>>>>>>>>>>>>>>>>>
+
+    ///////////
+
     
     async function sendImage(file) {
         const formData = new FormData();
         formData.append('file', file)
-        const res = await fetch ('http://localhost:8008/uploadImage', {
+        const res = await fetch ('http://127.0.0.1:8008/uploadImage', {
             method: 'POST',
             body: formData
         })
@@ -135,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(response);
     }
     async function saveCrop(coords) {
-        const res = await fetch('http://localhost:8008/saveCrop', {
+        const res = await fetch('http://127.0.0.1:8008/saveCrop', {
             method: 'POST',
             body: JSON.stringify({
                 crop: coords
@@ -185,7 +196,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-    loadFirstImage();
 
     // <<<<<<<<<<<<<<<<<< INTERACTIONS, ZOOM and PAD >>>>>>>>>>>>>>>>>>>>>>
     annCanvas.addEventListener('mousedown', (e) => {
@@ -291,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const res = await fetch (`${apiAddress}/saveCrop`, {
             method: 'POST',
             body: JSON.stringify({
-                crop : cropCoordonnates
+                crop : cropCoordinates
             })
         })
         const response = await res.json();
@@ -341,5 +351,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
+    loadFirstImage();
 });
 
