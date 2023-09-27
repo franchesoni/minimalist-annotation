@@ -35,7 +35,6 @@ async def saveCrop(request: Request):
     body = await request.json()
     crop = str(body['crop'])
     coord_list = crop.split(',')
-    print(coord_list)
     x1 = int(coord_list[0])
     y1 = int(coord_list[1])
     x2 = int(coord_list[2])

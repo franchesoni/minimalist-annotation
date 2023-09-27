@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastMouseY = 0;
     let cropCoordonnates = 0;
     let pixelization = 0;
+    let isDrawing = false;
+    let startX, startY, endX, endY, startImageX, startImageY, endImageX, endImageY;
 
     async function sendImage(file) {
         const formData = new FormData();
@@ -73,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Update the displayed coordinates
         cropCoordonnates = `${topLeftX.toFixed(0)}, ${topLeftY.toFixed(0)}, ${bottomRightX.toFixed(0)}, ${bottomRightY.toFixed(0)}`
-        coordinates.textContent = `Top Left: (${topLeftX.toFixed(2)}, ${topLeftY.toFixed(2)}) | Bottom Right: (${bottomRightX.toFixed(2)}, ${bottomRightY.toFixed(2)})`;
+        coordinates.textContent = `Top Left: (${topLeftX.toFixed(0)}, ${topLeftY.toFixed(0)}) | Bottom Right: (${bottomRightX.toFixed(0)}, ${bottomRightY.toFixed(0)})`;
         
     }
 
@@ -99,8 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         drawImage();
     }
-
-    
 
     uploadForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -185,6 +185,26 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Display the coordinates in the console in real-time
         mouseCoordinates.textContent = `Mouse: (${imageX.toFixed(2)}, ${imageY.toFixed(2)})`;
+
+        if (isDrawing) {
+            // Mise à jour des coordonnées finales pendant le déplacement de la souris
+            endX = e.clientX - canvas.getBoundingClientRect().left;
+            endY = e.clientY - canvas.getBoundingClientRect().top;
+    
+            // Effacez le contenu précédent du canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+            // Calculez les coordonnées du point en haut à gauche et du point en bas à droite
+            const topLeftX = Math.min(startX, endX);
+            const topLeftY = Math.min(startY, endY);
+            const bottomRightX = Math.max(startX, endX);
+            const bottomRightY = Math.max(startY, endY);
+    
+            // Dessinez le rectangle actuel en temps réel
+            ctx.strokeStyle = 'red'; // Couleur du rectangle (rouge)
+            ctx.lineWidth = 2; // Épaisseur de la ligne
+            ctx.strokeRect(topLeftX, topLeftY, bottomRightX - topLeftX, bottomRightY - topLeftY);
+        }
     });
 
     canvas.addEventListener('wheel', (e) => {
@@ -219,4 +239,41 @@ document.addEventListener('DOMContentLoaded', () => {
         const response = await res.json();
         console.log(response);
     })
+    canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault(); // Empêche le menu contextuel de s'ouvrir
+
+    if (!isDrawing) {
+        // Premier clic droit, enregistrez les coordonnées de départ
+        startX = e.clientX - canvas.getBoundingClientRect().left;
+        startY = e.clientY - canvas.getBoundingClientRect().top;
+
+        const startImageX = (startX - offsetX) / scale;
+        const startImageY = (startX - offsetY) / scale;
+
+        isDrawing = true;
+    } else {
+        // Deuxième clic droit, enregistrez les coordonnées d'arrêt
+        endX = e.clientX - canvas.getBoundingClientRect().left;
+        endY = e.clientY - canvas.getBoundingClientRect().top;
+
+        const endImageX = (endX - offsetX) / scale;
+        const endImageY = (endY - offsetY) / scale;
+        isDrawing = false;
+
+        // Calculez les coordonnées du point en haut à gauche et du point en bas à droite
+        const topLeftX = Math.min(startImageX, endImageX);
+        const topLeftY = Math.min(startImageY, endImageY);
+        const bottomRightX = Math.max(startImageX, endImageX);
+        const bottomRightY = Math.max(startImageY, endImageY);
+
+        // Dessinez le rectangle sur l'image
+        ctx.strokeStyle = 'red'; // Couleur du rectangle (rouge)
+        ctx.lineWidth = 2; // Épaisseur de la ligne
+        ctx.strokeRect(topLeftX, topLeftY, bottomRightX - topLeftX, bottomRightY - topLeftY);
+
+        // Affichez les coordonnées de la boîte
+        console.log(`Top Left: (${topLeftX.toFixed(2)}, ${topLeftY.toFixed(2)})`);
+        console.log(`Bottom Right: (${bottomRightX.toFixed(2)}, ${bottomRightY.toFixed(2)})`);
+    }
+});
 });
