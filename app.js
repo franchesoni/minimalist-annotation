@@ -54,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+
     // <<<<<<<<<<<<<<<<<<<<< UPLOAD/SAVECROP button >>>>>>>>>>>>>>>>>>>
     uploadForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -244,6 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
     annCanvas.addEventListener('contextmenu', (e) => {
         e.preventDefault();
     });
+
 
 });
 
