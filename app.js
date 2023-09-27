@@ -247,8 +247,8 @@ document.addEventListener('DOMContentLoaded', () => {
         startX = e.clientX - canvas.getBoundingClientRect().left;
         startY = e.clientY - canvas.getBoundingClientRect().top;
 
-        const startImageX = (startX - offsetX) / scale;
-        const startImageY = (startX - offsetY) / scale;
+        startImageX = (startX - offsetX) / scale;
+        startImageY = (startY - offsetY) / scale;
 
         isDrawing = true;
     } else {
@@ -256,8 +256,8 @@ document.addEventListener('DOMContentLoaded', () => {
         endX = e.clientX - canvas.getBoundingClientRect().left;
         endY = e.clientY - canvas.getBoundingClientRect().top;
 
-        const endImageX = (endX - offsetX) / scale;
-        const endImageY = (endY - offsetY) / scale;
+        endImageX = (endX - offsetX) / scale;
+        endImageY = (endY - offsetY) / scale;
         isDrawing = false;
 
         // Calculez les coordonnées du point en haut à gauche et du point en bas à droite
