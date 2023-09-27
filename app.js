@@ -28,64 +28,72 @@ document.addEventListener('DOMContentLoaded', () => {
     let maxScale = 0;
     let offsetX = 0;
     let offsetY = 0;
-    let mouseDown = false;
+    let isPadding = false;
     let lastMouseX = 0;
     let lastMouseY = 0;
     let cropCoordinates = 0;
-    let indexImage = 0
-    let nbImages = 0
-    
-    async function getFirstImageURL() {
-        const res = await fetch(`${apiAddress}/getFirstImage`, {
-            headers: {
-              'Cache-Control': 'no-cache',
-            },
-          });
-        // Ensure the response is successful before proceeding
+    let imageIndex = 0
+    let numImages = 0
+    let filepath = ''
+    let annotation = {
+        'bboxes': [],
+        'clicks': [],
+        'text': ''
+    };
+
+
+
+
+    // <<<<<<<<<<<<<<<<<< IMAGE LOADING >>>>>>>>>>>>>>>>>>>>>>
+    async function handleGetImageResponse(res) {
         if (res.ok) {
             // Get the image URL from the response
             const imageUrl = URL.createObjectURL(await res.blob());
-            nbImages = res.headers.get('nbImages')
-            console.log(nbImages)
+            imageIndex = res.headers.get('imageIndex')
+            numImages = res.headers.get('numImages')
+            annotation = JSON.parse(res.headers.get('ann').replace(/'/g, '"'));
+            window.annotation = annotation
+            filepath = res.headers.get('filepath')
+            console.log('>>>--------------')
+            console.log('filepath:', filepath)
+            console.log('annotation:', annotation)
+            console.log('imageIndex:', imageIndex)
+            console.log('numImages:', numImages)
+            console.log('--------------<<<')
             return imageUrl;
         } else {
             // Handle errors, for example, return null in case of an error
             return null;
         }
+    }
+
+
+
+    async function getFirstImageURL() {
+        const res = await fetch(`${apiAddress}/getFirstImage`, {
+            headers: {
+                'Cache-Control': 'no-cache',
+            },
+        });
+        return handleGetImageResponse(res)
     }
 
     async function getNextImageURL() {
         const res = await fetch(`${apiAddress}/getNextImage`, {
             headers: {
-              'Cache-Control': 'no-cache',
+                'Cache-Control': 'no-cache',
             },
-          });
-        // Ensure the response is successful before proceeding
-        if (res.ok) {
-            // Get the image URL from the response
-            const imageUrl = URL.createObjectURL(await res.blob());
-            return imageUrl;
-        } else {
-            // Handle errors, for example, return null in case of an error
-            return null;
-        }
+        });
+        return handleGetImageResponse(res)
     }
 
     async function getPrevImageURL() {
         const res = await fetch(`${apiAddress}/getPrevImage`, {
             headers: {
-              'Cache-Control': 'no-cache',
+                'Cache-Control': 'no-cache',
             },
-          });
-        // Ensure the response is successful before proceeding
-        if (res.ok) {
-            // Get the image URL from the response
-            const imageUrl = URL.createObjectURL(await res.blob());
-            return imageUrl;
-        } else {
-            // Handle errors, for example, return null in case of an error
-            return null;
-        }
+        });
+        return handleGetImageResponse(res)
     }
 
     async function loadFirstImage() {
@@ -102,43 +110,40 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadImage(imageURL) {
         image.src = imageURL;
         console.log(image.src)
-            image.onload = () => {
-                // Calculate the initial maximum scale
-                scale = Math.min(maxWidth / image.width, maxHeight / image.height);
-                maxScale = scale;
+        image.onload = () => {
+            // Calculate the initial maximum scale
+            scale = Math.min(maxWidth / image.width, maxHeight / image.height);
+            maxScale = scale;
 
-                // Reset the offset parameters
-                offsetX = 0;
-                offsetY = 0;
+            // Reset the offset parameters
+            offsetX = 0;
+            offsetY = 0;
 
-                // Apply the dimensions to the canvas without changing the scale
-                imgCanvas.width = maxWidth;
-                imgCanvas.height = maxHeight;
-                annCanvas.width = maxWidth;
-                annCanvas.height = maxHeight;
-                annHolderCanvas.width = image.width;
-                annHolderCanvas.height = image.height;
+            // Apply the dimensions to the canvas without changing the scale
+            imgCanvas.width = maxWidth;
+            imgCanvas.height = maxHeight;
+            annCanvas.width = maxWidth;
+            annCanvas.height = maxHeight;
+            annHolderCanvas.width = image.width;
+            annHolderCanvas.height = image.height;
 
-                // Draw the image at the correct scale
-                drawImage();
-                drawAnnotation();
-            };
+            // Draw the image at the correct scale
+            drawImage();
+            drawAnnotation();
+        };
     }
 
-
-    /////////
 
 
 
     // <<<<<<<<<<<<<<<<<<<<< UPLOAD/SAVECROP button >>>>>>>>>>>>>>>>>>>
 
-    ///////////
 
-    
+
     async function sendImage(file) {
         const formData = new FormData();
         formData.append('file', file)
-        const res = await fetch ('http://127.0.0.1:8008/uploadImage', {
+        const res = await fetch('http://127.0.0.1:8008/uploadImage', {
             method: 'POST',
             body: formData
         })
@@ -164,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    // <<<<<<<<<<<<<<<<<< DISPLAY function >>>>>>>>>>>>>>>>>>>>>>
+    // <<<<<<<<<<<<<<<<<< DISPLAY functions >>>>>>>>>>>>>>>>>>>>>>
     function drawImage() {
         imgCtx.clearRect(0, 0, imgCanvas.width, imgCanvas.height);
         imgCtx.drawImage(image, offsetX, offsetY, image.width * scale, image.height * scale);
@@ -197,47 +202,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    // <<<<<<<<<<<<<<<<<< INTERACTIONS, ZOOM and PAD >>>>>>>>>>>>>>>>>>>>>>
+    // <<<<<<<< INTERACTIONS (zoom, pad, ann) >>>>>>>>
+    annCanvas.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+    });
+
     annCanvas.addEventListener('mousedown', (e) => {
-        mouseDown = true;
-        lastMouseX = e.clientX;
-        lastMouseY = e.clientY;
-    });
-
-    annCanvas.addEventListener('mouseup', () => {
-        mouseDown = false;
-    });
-
-    function zoomToMouse(mouseX, mouseY, delta) {
-        const newScale = scale - delta;
-        const mouseCanvasX = (mouseX - offsetX) / scale;
-        const mouseCanvasY = (mouseY - offsetY) / scale;
-        const newOffsetX = mouseX - mouseCanvasX * newScale;
-        const newOffsetY = mouseY - mouseCanvasY * newScale;
-
-        if (newScale < maxScale) {
-            return;
+        if (e.button = 1) {
+            isPadding = true;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
         }
 
-        scale = newScale;
-        offsetX = newOffsetX;
-        offsetY = newOffsetY;
-
-        const minX = Math.min(0, imgCanvas.width - image.width * scale);
-        const minY = Math.min(0, imgCanvas.height - image.height * scale);
-        offsetX = Math.max(minX, Math.min(offsetX, 0));
-        offsetY = Math.max(minY, Math.min(offsetY, 0));
-
-        drawImage();
+        annMouseDown(e)
         drawAnnotation();
-    }
+    });
 
-
-
+    annCanvas.addEventListener('mouseup', (e) => {
+        if (e.button = 1) {
+            isPadding = false;
+        }
+        annMouseUp(e)
+        drawAnnotation();
+    });
 
 
     annCanvas.addEventListener('mousemove', (e) => {
-        if (mouseDown) {
+        if (isPadding) {
             const mouseX = e.clientX;
             const mouseY = e.clientY;
 
@@ -268,6 +259,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Display the coordinates in the console in real-time
         mouseCoordinates.textContent = `Mouse: (${imageX.toFixed(2)}, ${imageY.toFixed(2)})`;
+
+        annMouseMove(e)
+        drawAnnotation();
     });
 
     annCanvas.addEventListener('wheel', (e) => {
@@ -279,11 +273,35 @@ document.addEventListener('DOMContentLoaded', () => {
         const mouseY = e.clientY;
 
         zoomToMouse(mouseX, mouseY, zoomDelta);
+        drawImage();
+        drawAnnotation();
     });
 
-    // Add a click event listener to display coordinates in the console
-    annCanvas.addEventListener('mousedown', (event) => {
-        if (event.button == 0) {
+    function zoomToMouse(mouseX, mouseY, delta) {
+        const newScale = scale - delta;
+        const mouseCanvasX = (mouseX - offsetX) / scale;
+        const mouseCanvasY = (mouseY - offsetY) / scale;
+        const newOffsetX = mouseX - mouseCanvasX * newScale;
+        const newOffsetY = mouseY - mouseCanvasY * newScale;
+
+        if (newScale < maxScale) {
+            return;
+        }
+
+        scale = newScale;
+        offsetX = newOffsetX;
+        offsetY = newOffsetY;
+
+        const minX = Math.min(0, imgCanvas.width - image.width * scale);
+        const minY = Math.min(0, imgCanvas.height - image.height * scale);
+        offsetX = Math.max(minX, Math.min(offsetX, 0));
+        offsetY = Math.max(minY, Math.min(offsetY, 0));
+
+    }
+
+    function annMouseDown(event) {
+        // Add a click event listener to display coordinates in the console
+        if (event.button == 0 || event.button == 2) {
             // Get the click coordinates relative to the canvas
             const clickX = event.clientX - imgCanvas.getBoundingClientRect().left;
             const clickY = event.clientY - imgCanvas.getBoundingClientRect().top;
@@ -293,15 +311,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const imageY = (clickY - offsetY) / scale;
 
             console.log(`Click at (${imageX.toFixed(2)}, ${imageY.toFixed(2)})`);
+            annotation.clicks.push([imageX, imageY, event.button==0])
+            console.log('Annotation after:', annotation);
         }
-        
-    });
+    }
 
-    saveCropButton.addEventListener('click', async (event)  => {
-        const res = await fetch (`${apiAddress}/saveCrop`, {
+    function annMouseUp(event) {
+    }
+
+    function annMouseMove(event) {
+    }
+
+
+
+    saveCropButton.addEventListener('click', async (event) => {
+        const res = await fetch(`${apiAddress}/saveCrop`, {
             method: 'POST',
             body: JSON.stringify({
-                crop : cropCoordinates
+                crop: cropCoordinates
             })
         })
         const response = await res.json();
@@ -309,7 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
     })
 
     prevButton.addEventListener('click', () => {
-        if (indexImage==0) {
+        if (imageIndex == 0) {
             alert("No previous image")
             return
         }
@@ -323,12 +350,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("No image available.");
             }
         }
+        sendAnnotation()
         loadPrevImage()
-        indexImage -=1
+        imageIndex -= 1
     })
 
     nextButton.addEventListener('click', () => {
-        if (indexImage==nbImages-1) {
+        if (imageIndex == numImages - 1) {
             alert("No next image")
             return
         }
@@ -342,13 +370,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("No image available.");
             }
         }
+        sendAnnotation()
         loadNextImage()
-        indexImage +=1
+        imageIndex += 1
     })
 
-    annCanvas.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-    });
+    async function sendAnnotation() {
+        const res = await fetch(`${apiAddress}/saveAnnotation`, {
+            method: 'POST',
+            body: JSON.stringify({
+                annotation: annotation,
+                filepath: filepath,
+                imageIndex: imageIndex
+            })
+        })
+        const response = await res.json();
+        console.log(response);
+    }
+
+
 
 
     loadFirstImage();

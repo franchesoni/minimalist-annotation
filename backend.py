@@ -4,11 +4,13 @@ from fastapi.staticfiles import StaticFiles
 from starlette.responses import JSONResponse
 
 from PIL import Image
+import json
+import shutil
 import numpy as np
+from pathlib import Path
 import io
 import os
 import argparse
-
 
 class State:
     def __init__(self):
@@ -16,18 +18,25 @@ class State:
         self.pilimg = None
         self.nb_cropped_images_saved = 0
         self.imageFiles = []
-        self.indexImage = 0
+        self.imageIndex = 0
+        self.annotations = {}
+        # the format of annotations is {image_filename: {'bboxes': [[leftcol, toprow, width, height], ...], 'clicks': [(col, row, label), ...]}, 'text': 'some text'}, ...}
 
 
 state = State()
 
 app = FastAPI(
-    title="zoomApp",
+    title="AnnotationApp",
 )
 
+
 def load_images_from_folder(folder_path):
-    extensions = ('.png', '.jpg', '.jpeg', '.gif', '.bmp')
-    image_files = [os.path.join(folder_path, filename) for filename in os.listdir(folder_path) if filename.lower().endswith(extensions)]
+    extensions = (".png", ".jpg", ".jpeg", ".bmp")
+    image_files = [
+        os.path.join(folder_path, filename)
+        for filename in os.listdir(folder_path)
+        if filename.lower().endswith(extensions)
+    ]
     return image_files
 
 
@@ -38,33 +47,42 @@ def test():
 
 @app.get("/getFirstImage")
 async def get_first_image():
-    if state.imageFiles:
-        first_image_path = state.imageFiles[0]  # Chemin du premier fichier image
-        return FileResponse(first_image_path, headers={"nbImages" : str(len(state.imageFiles))})
-    else:
-        # Gérez le cas où aucune image n'est disponible
-        return JSONResponse(content={"error": "Aucune image disponible"}, status_code=404)
+    state.imageIndex = 0
+    return get_image()
+
 
 @app.get("/getNextImage")
 async def getNextImage():
-    state.indexImage += 1
-    if state.imageFiles:
-        first_image_path = state.imageFiles[state.indexImage]  # Chemin du premier fichier image
-        return FileResponse(first_image_path)
-    else:
-        # Gérez le cas où aucune image n'est disponible
-        return JSONResponse(content={"error": "Aucune image disponible"}, status_code=404)
+    state.imageIndex += 1
+    return get_image()
+
 
 @app.get("/getPrevImage")
 async def getPrevImage():
-    state.indexImage -= 1 
-    print(state.indexImage)
-    if state.imageFiles:
-        first_image_path = state.imageFiles[state.indexImage]  # Chemin du premier fichier image
-        return FileResponse(first_image_path)
+    state.imageIndex -= 1
+    return get_image()
+
+
+def get_image():
+    print("getting image number", state.imageIndex)
+    if (
+        state.imageFiles
+        and state.imageIndex >= 0
+        and state.imageIndex < len(state.imageFiles)
+    ):
+        filepath = state.imageFiles[state.imageIndex]
+        return FileResponse(
+            filepath,
+            headers={
+                "imageIndex": str(state.imageIndex),
+                "filepath": filepath,
+                "ann": str(state.annotations[filepath]),
+                "numImages": str(len(state.imageFiles)),
+            },
+        )
     else:
-        # Gérez le cas où aucune image n'est disponible
-        return JSONResponse(content={"error": "Aucune image disponible"}, status_code=404)
+        return JSONResponse(content={"error": "No image available"}, status_code=404)
+
 
 @app.post("/uploadImage")
 async def uploadImage(file: UploadFile):
@@ -78,8 +96,8 @@ async def uploadImage(file: UploadFile):
 @app.post("/saveCrop")
 async def saveCrop(request: Request):
     body = await request.json()
-    crop = str(body['crop'])
-    coord_list = crop.split(',')
+    crop = str(body["crop"])
+    coord_list = crop.split(",")
     x1 = int(coord_list[0])
     y1 = int(coord_list[1])
     x2 = int(coord_list[2])
@@ -90,13 +108,50 @@ async def saveCrop(request: Request):
     state.nb_cropped_images_saved += 1
 
 
+@app.post("/saveAnnotation")
+async def saveAnnotation(request: Request):
+    body = await request.json()
+    filepath = body['filepath']
+    ann = body['annotation']
+    imageIndex = int(body['imageIndex'])
+    assert imageIndex == state.imageIndex
+    assert filepath == state.imageFiles[state.imageIndex]
+    state.annotations[state.imageFiles[state.imageIndex]] = ann
+    print('great success!')
+    print('annotation:', state.annotations)
+    return {"message": "Data received successfully!"}
+
+
+
 app.mount("/", StaticFiles(directory=".", html=True))
 
 if __name__ == "__main__":
-    import uvicorn
     parser = argparse.ArgumentParser(description="FastAPI Image Server")
     parser.add_argument("image_folder", help="Path to the image folder")
+    parser.add_argument(
+        "dst", help="Path to the destination folder of the annotation campaign"
+    )
+    # reset argument that defaults to false
+    parser.add_argument("--reset", action="store_true", help="Reset the campaign")
     args = parser.parse_args()
+
+    # initialize dst folder
+    if args.reset:
+        shutil.rmtree(args.dst, ignore_errors=True)
+    os.makedirs(args.dst, exist_ok=True)
+
+    # initialize state
     state.imageFiles = load_images_from_folder(args.image_folder)
+    if (Path(args.dst) / "annotations.json").exists():
+        with open(Path(args.dst) / "annotations.json", "r") as f:
+            state.annotations = json.load(f)
+    else:
+        state.annotations = {
+            img_file: {"bboxes": [], "clicks": [], "text": ""}
+            for img_file in state.imageFiles
+        }
     print(state.imageFiles)
+
+    import uvicorn
+
     uvicorn.run(app, host="127.0.0.1", port=8008)
