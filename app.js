@@ -21,8 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function sendImage(file) {
         const formData = new FormData();
-        formData.append('file',file)
-        const res = await fetch ('http://localhost:8008/uploadImage', {
+        formData.append('file', file)
+        const res = await fetch('http://localhost:8008/uploadImage', {
             method: 'POST',
             body: formData
         })
@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update the displayed coordinates
         cropCoordonnates = `${topLeftX.toFixed(0)}, ${topLeftY.toFixed(0)}, ${bottomRightX.toFixed(0)}, ${bottomRightY.toFixed(0)}`
         coordinates.textContent = `Top Left: (${topLeftX.toFixed(2)}, ${topLeftY.toFixed(2)}) | Bottom Right: (${bottomRightX.toFixed(2)}, ${bottomRightY.toFixed(2)})`;
-        
+
     }
 
     function zoomToMouse(mouseX, mouseY, delta) {
@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
         drawImage();
     }
 
-    
+
 
     uploadForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -178,11 +178,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Get the coordinates of the mouse pointer relative to the canvas
         const mouseCanvasX = e.clientX - canvas.getBoundingClientRect().left;
         const mouseCanvasY = e.clientY - canvas.getBoundingClientRect().top;
-        
+
         // Calculate the real coordinates in the image, taking into account the scale and offsets
         const imageX = (mouseCanvasX - offsetX) / scale;
         const imageY = (mouseCanvasY - offsetY) / scale;
-        
+
         // Display the coordinates in the console in real-time
         mouseCoordinates.textContent = `Mouse: (${imageX.toFixed(2)}, ${imageY.toFixed(2)})`;
     });
@@ -209,11 +209,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log(`Clic à (${imageX.toFixed(2)}, ${imageY.toFixed(2)})`);
     });
-    saveCropButton.addEventListener('click', async (event)  => {
-        const res = await fetch ('http://localhost:8008/saveCrop', {
+    saveCropButton.addEventListener('click', async (event) => {
+        const res = await fetch('http://localhost:8008/saveCrop', {
             method: 'POST',
             body: JSON.stringify({
-                crop : cropCoordonnates
+                crop: cropCoordonnates
             })
         })
         const response = await res.json();
