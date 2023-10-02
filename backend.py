@@ -71,6 +71,7 @@ def get_image():
         and state.imageIndex < len(state.imageFiles)
     ):
         filepath = state.imageFiles[state.imageIndex]
+        print(filepath)
         return FileResponse(
             filepath,
             headers={

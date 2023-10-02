@@ -40,8 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
         'clicks': [],
         'text': ''
     };
-
-
+    let isDrawing = false;
+    let startX, startY, endX, endY;
+    let rectangles = [];
 
 
     // <<<<<<<<<<<<<<<<<< IMAGE LOADING >>>>>>>>>>>>>>>>>>>>>>
@@ -193,7 +194,16 @@ document.addEventListener('DOMContentLoaded', () => {
         annCtx.globalAlpha = transparencySlider.value;
         annCtx.drawImage(annHolderCanvas, offsetX, offsetY, image.width * scale, image.height * scale);
         annCtx.globalAlpha = 1;
+    
+        // Dessinez les rectangles stockés
+        annCtx.strokeStyle = 'red'; // Couleur du rectangle (rouge)
+        annCtx.lineWidth = 2; // Épaisseur de la ligne
+
+        for (const rect of rectangles) {
+            annCtx.strokeRect(rect.x1, rect.y1, rect.x2 - rect.x1, rect.y2 - rect.y1);
+        }
     }
+    
 
 
     transparencySlider.addEventListener('input', function () {
@@ -207,13 +217,68 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
     });
 
+    function drawRectangle(x1, y1, x2, y2) {
+        annCtx.clearRect(0, 0, annCanvas.width, annCanvas.height);
+        annCtx.globalAlpha = transparencySlider.value;
+        annCtx.drawImage(annHolderCanvas, offsetX, offsetY, image.width * scale, image.height * scale);
+        annCtx.globalAlpha = 1;
+        
+        // Calculez les coordonnées réelles en tenant compte de l'échelle (scale) et de l'offset (offsetX, offsetY)
+        const realX1 = (x1 - offsetX) / scale;
+        const realY1 = (y1 - offsetY) / scale;
+        const realX2 = (x2 - offsetX) / scale;
+        const realY2 = (y2 - offsetY) / scale;
+    
+        // Dessinez le rectangle avec les coordonnées réelles
+        annCtx.strokeStyle = 'red'; // Couleur du rectangle (rouge)
+        annCtx.lineWidth = 2; // Épaisseur de la ligne
+        annCtx.strokeRect(realX1, realY1, realX2 - realX1, realY2 - realY1);
+    }
+    
+    
+    
+    annCanvas.addEventListener('click', (e) => {
+        if (e.button == 0) {
+            if (!isDrawing) {
+                // Commencez à dessiner lorsque le premier clic gauche est effectué
+                isDrawing = true;
+    
+                startX = e.clientX - imgCanvas.getBoundingClientRect().left;
+                startY = e.clientY - imgCanvas.getBoundingClientRect().top;
+    
+                // Ajustez les coordonnées pour tenir compte de l'échelle
+                startX /= scale;
+                startY /= scale;
+            } else {
+                // Validez le rectangle avec le deuxième clic gauche
+                isDrawing = false;
+    
+                endX = e.clientX - imgCanvas.getBoundingClientRect().left;
+                endY = e.clientY - imgCanvas.getBoundingClientRect().top;
+    
+                // Ajustez les coordonnées pour tenir compte de l'échelle
+                endX /= scale;
+                endY /= scale;
+    
+                // Dessinez le rectangle en utilisant drawRectangle
+                drawRectangle(startX, startY, endX, endY);
+    
+                // Ajoutez le rectangle en cours au tableau des rectangles
+                rectangles.push({ x1: startX, y1: startY, x2: endX, y2: endY });
+                console.log(rectangles);
+            }
+        }
+    });
+    
+    
+    
+    
     annCanvas.addEventListener('mousedown', (e) => {
         if (e.button = 1) {
             isPadding = true;
             lastMouseX = e.clientX;
             lastMouseY = e.clientY;
         }
-
         annMouseDown(e)
         drawAnnotation();
     });
@@ -226,7 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
         drawAnnotation();
     });
 
-
+    
     annCanvas.addEventListener('mousemove', (e) => {
         if (isPadding) {
             const mouseX = e.clientX;
@@ -261,7 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mouseCoordinates.textContent = `Mouse: (${imageX.toFixed(2)}, ${imageY.toFixed(2)})`;
 
         annMouseMove(e)
-        drawAnnotation();
+        //drawAnnotation();
     });
 
     annCanvas.addEventListener('wheel', (e) => {
@@ -350,13 +415,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("No image available.");
             }
         }
-        sendAnnotation()
+        //sendAnnotation()
         loadPrevImage()
         imageIndex -= 1
     })
 
     nextButton.addEventListener('click', () => {
-        if (imageIndex == numImages - 1) {
+        if (imageIndex == (numImages - 1)) {
             alert("No next image")
             return
         }
@@ -370,7 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("No image available.");
             }
         }
-        sendAnnotation()
+        //sendAnnotation()
         loadNextImage()
         imageIndex += 1
     })
