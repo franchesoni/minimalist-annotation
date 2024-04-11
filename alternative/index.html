@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            background-color: #121212; /* Dark background */
+            color: #E0E0E0; /* Light gray text for better visibility */
+            font-family: Arial, sans-serif;
+        }
+        button {
+            background-color: #333; /* Darker shade for buttons */
+            color: #FFF; /* White text on buttons */
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #555; /* Slightly lighter on hover */
+        }
+        #imageDisplay {
+            display: block; /* Ensures the image doesn't have extra space below it */
+            max-width: 90%; /* Adjusts image size to be more responsive */
+            max-height: 80vh; /* Adjusts image size based on the viewport height */
+            margin: 20px auto; /* Centers the image and adds some spacing */
+            border: 3px solid #333; /* Adds a border around the image */
+            border-radius: 10px; /* Rounds the corners of the border */
+        }
+    </style>
+</head>
+<body>
+
+<input type="file" id="folderInput" webkitdirectory directory multiple>
+<button id="nextButton">Next</button>
+<button id="prevButton">Previous</button>
+<img id="imageDisplay" src="" alt="No Image" style="max-width: 600px; max-height: 400px;">
+
+<script src="script.js"></script>
+
+</body>
+</html>
