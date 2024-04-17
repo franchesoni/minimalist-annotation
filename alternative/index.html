@@ -22,17 +22,19 @@
         #canvasContainer {
             position: relative;
             width: 90%;
-            max-width: 900px; /* Adjust based on your preference */
+            max-width: 900px;
             height: 80vh;
             margin: auto;
             border: 3px solid #333;
             border-radius: 10px;
-            overflow: hidden; /* Ensures nothing spills outside the container */
+            overflow: hidden;
         }
         canvas {
-            display: block;
-            width: 100%; /* Fill the container but maintain aspect ratio */
-            height: 100%; /* Image will scale based on this */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
         }
     </style>
 </head>
@@ -43,14 +45,17 @@
 <button id="nextButton" class="hidden">Next</button>
 <div id="canvasContainer">
     <canvas id="imageCanvas"></canvas>
+    <canvas id="crosshairCanvas"></canvas>
 </div>
 
 <script>
 let imageFiles = [];
 let currentIndex = 0;
 let annotations = [];
-let canvas = document.getElementById('imageCanvas');
-let ctx = canvas.getContext('2d');
+let imageCanvas = document.getElementById('imageCanvas');
+let crosshairCanvas = document.getElementById('crosshairCanvas');
+let imageCtx = imageCanvas.getContext('2d');
+let crosshairCtx = crosshairCanvas.getContext('2d');
 let currentImage = null;
 let margin = 20; // Margin around the image
 
@@ -70,7 +75,8 @@ document.getElementById('folderInput').addEventListener('change', function(event
         document.getElementById('folderInput').style.display = 'none';
         document.getElementById('prevButton').classList.remove('hidden');
         document.getElementById('nextButton').classList.remove('hidden');
-        canvas.classList.remove('hidden');
+        document.getElementById('imageCanvas').classList.remove('hidden');
+        document.getElementById('crosshairCanvas').classList.remove('hidden');
         showImage();
     } else {
         alert('No images found in the folder.');
@@ -91,29 +97,29 @@ document.getElementById('prevButton').addEventListener('click', function() {
     }
 });
 
-canvas.addEventListener('mousemove', function(event) {
-    drawImage();
+crosshairCanvas.addEventListener('mousemove', function(event) {
     drawCrosshair(event.offsetX, event.offsetY);
 });
 
 function drawImage() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    let maxCanvasWidth = canvas.width - 2 * margin;
-    let maxCanvasHeight = canvas.height - 2 * margin;
+    imageCtx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+    let maxCanvasWidth = imageCanvas.width - 2 * margin;
+    let maxCanvasHeight = imageCanvas.height - 2 * margin;
     let ratio = Math.min(maxCanvasWidth / currentImage.width, maxCanvasHeight / currentImage.height);
-    let x = (canvas.width - currentImage.width * ratio) / 2;
-    let y = (canvas.height - currentImage.height * ratio) / 2;
-    ctx.drawImage(currentImage, x, y, currentImage.width * ratio, currentImage.height * ratio);
+    let x = (imageCanvas.width - currentImage.width * ratio) / 2;
+    let y = (imageCanvas.height - currentImage.height * ratio) / 2;
+    imageCtx.drawImage(currentImage, x, y, currentImage.width * ratio, currentImage.height * ratio);
 }
 
 function drawCrosshair(x, y) {
-    ctx.strokeStyle = 'red';
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, canvas.height);
-    ctx.moveTo(0, y);
-    ctx.lineTo(canvas.width, y);
-    ctx.stroke();
+    crosshairCtx.clearRect(0, 0, crosshairCanvas.width, crosshairCanvas.height);
+    crosshairCtx.strokeStyle = 'red';
+    crosshairCtx.beginPath();
+    crosshairCtx.moveTo(x, 0);
+    crosshairCtx.lineTo(x, crosshairCanvas.height);
+    crosshairCtx.moveTo(0, y);
+    crosshairCtx.lineTo(crosshairCanvas.width, y);
+    crosshairCtx.stroke();
 }
 
 function showImage() {
@@ -122,8 +128,8 @@ function showImage() {
         fileReader.onload = function(e) {
             currentImage = new Image();
             currentImage.onload = () => {
-                canvas.width = canvasContainer.clientWidth;
-                canvas.height = canvasContainer.clientHeight;
+                imageCanvas.width = crosshairCanvas.width = canvasContainer.clientWidth;
+                imageCanvas.height = crosshairCanvas.height = canvasContainer.clientHeight;
                 drawImage();
             };
             currentImage.src = e.target.result;
@@ -137,3 +143,4 @@ function showImage() {
 
 </body>
 </html>
+
