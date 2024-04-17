@@ -19,6 +19,9 @@
         button:hover {
             background-color: #555; /* Slightly lighter on hover */
         }
+        .hidden {
+            display: none; /* Hide elements initially */
+        }
         #imageDisplay {
             display: block; /* Ensures the image doesn't have extra space below it */
             max-width: 90%; /* Adjusts image size to be more responsive */
@@ -32,9 +35,9 @@
 <body>
 
 <input type="file" id="folderInput" webkitdirectory directory multiple>
-<button id="nextButton">Next</button>
-<button id="prevButton">Previous</button>
-<img id="imageDisplay" src="" alt="No Image" style="max-width: 600px; max-height: 400px;">
+<button id="prevButton" class="hidden">Previous</button>
+<button id="nextButton" class="hidden">Next</button>
+<img id="imageDisplay" src="" alt="No Image" class="hidden">
 
 <script src="script.js"></script>
 
