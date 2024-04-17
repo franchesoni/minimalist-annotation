@@ -3,13 +3,13 @@
 <head>
     <style>
         body {
-            background-color: #121212; /* Dark background */
-            color: #E0E0E0; /* Light gray text for better visibility */
+            background-color: #121212;
+            color: #E0E0E0;
             font-family: Arial, sans-serif;
         }
         button {
-            background-color: #333; /* Darker shade for buttons */
-            color: #FFF; /* White text on buttons */
+            background-color: #333;
+            color: #FFF;
             border: none;
             padding: 10px 20px;
             margin: 5px;
@@ -17,18 +17,22 @@
             cursor: pointer;
         }
         button:hover {
-            background-color: #555; /* Slightly lighter on hover */
+            background-color: #555;
         }
-        .hidden {
-            display: none; /* Hide elements initially */
+        #canvasContainer {
+            position: relative;
+            width: 90%;
+            max-width: 900px; /* Adjust based on your preference */
+            height: 80vh;
+            margin: auto;
+            border: 3px solid #333;
+            border-radius: 10px;
+            overflow: hidden; /* Ensures nothing spills outside the container */
         }
-        #imageDisplay {
-            display: block; /* Ensures the image doesn't have extra space below it */
-            max-width: 90%; /* Adjusts image size to be more responsive */
-            max-height: 80vh; /* Adjusts image size based on the viewport height */
-            margin: 20px auto; /* Centers the image and adds some spacing */
-            border: 3px solid #333; /* Adds a border around the image */
-            border-radius: 10px; /* Rounds the corners of the border */
+        canvas {
+            display: block;
+            width: 100%; /* Fill the container but maintain aspect ratio */
+            height: 100%; /* Image will scale based on this */
         }
     </style>
 </head>
@@ -37,9 +41,96 @@
 <input type="file" id="folderInput" webkitdirectory directory multiple>
 <button id="prevButton" class="hidden">Previous</button>
 <button id="nextButton" class="hidden">Next</button>
-<img id="imageDisplay" src="" alt="No Image" class="hidden">
+<div id="canvasContainer">
+    <canvas id="imageCanvas"></canvas>
+</div>
 
-<script src="script.js"></script>
+<script>
+let imageFiles = [];
+let currentIndex = 0;
+let annotations = [];
+let canvas = document.getElementById('imageCanvas');
+let ctx = canvas.getContext('2d');
+let currentImage = null;
+
+document.getElementById('folderInput').addEventListener('change', function(event) {
+    const files = event.target.files;
+    imageFiles = [];
+    annotations = [];
+
+    for (const file of files) {
+        if (file.type.startsWith('image/')) {
+            imageFiles.push(file);
+            annotations.push([]);
+        }
+    }
+
+    if(imageFiles.length > 0) {
+        document.getElementById('folderInput').style.display = 'none';
+        document.getElementById('prevButton').classList.remove('hidden');
+        document.getElementById('nextButton').classList.remove('hidden');
+        canvas.classList.remove('hidden');
+        showImage();
+    } else {
+        alert('No images found in the folder.');
+    }
+});
+
+document.getElementById('nextButton').addEventListener('click', function() {
+    if(currentIndex < imageFiles.length - 1) {
+        currentIndex++;
+        showImage();
+    }
+});
+
+document.getElementById('prevButton').addEventListener('click', function() {
+    if(currentIndex > 0) {
+        currentIndex--;
+        showImage();
+    }
+});
+
+canvas.addEventListener('mousemove', function(event) {
+    drawImage();
+    drawCrosshair(event.offsetX, event.offsetY);
+});
+
+function drawImage() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let ratio = Math.min(canvas.width / currentImage.width, canvas.height / currentImage.height);
+    let x = (canvas.width - currentImage.width * ratio) / 2;
+    let y = (canvas.height - currentImage.height * ratio) / 2;
+    ctx.drawImage(currentImage, x, y, currentImage.width * ratio, currentImage.height * ratio);
+}
+
+function drawCrosshair(x, y) {
+    ctx.strokeStyle = 'red';
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+}
+
+function showImage() {
+    if (currentIndex >= 0 && currentIndex < imageFiles.length) {
+        const fileReader = new FileReader();
+        fileReader.onload = function(e) {
+            currentImage = new Image();
+            currentImage.onload = () => {
+                canvas.width = canvasContainer.clientWidth;
+                canvas.height = canvasContainer.clientHeight;
+                drawImage();
+            };
+            currentImage.src = e.target.result;
+        };
+        fileReader.readAsDataURL(imageFiles[currentIndex]);
+    } else {
+        alert('Index out of bounds. This should not happen.');
+    }
+}
+</script>
 
 </body>
 </html>
