@@ -64,6 +64,11 @@
         let crosshairCtx = crosshairCanvas.getContext('2d');
         let currentImage = null;
         let margin = 20; // Margin around the image
+        let dragging = false;
+        let lastX = 0;
+        let lastY = 0;
+        let translateX = 0;
+        let translateY = 0;
 
         document.getElementById('folderInput').addEventListener('change', function (event) {
             const files = event.target.files;
@@ -107,13 +112,43 @@
             drawCrosshair(event.offsetX, event.offsetY);
         });
 
+        window.addEventListener('mousemove', function (event) {
+            if (dragging) {
+                let dx = event.offsetX - lastX;
+                let dy = event.offsetY - lastY;
+                translateX += dx;
+                translateY += dy;
+                lastX = event.offsetX;
+                lastY = event.offsetY;
+                drawImage();
+            }
+        });
+
+        window.addEventListener('mousedown', function (event) {
+            if (event.button === 0) { // Check if left mouse button is pressed
+                console.log('dragging...')
+                dragging = true;
+                lastX = event.offsetX;
+                lastY = event.offsetY;
+            }
+        });
+
+
+
+        window.addEventListener('mouseup', function (event) {
+            if (event.button === 0) { // Ensure the left mouse button was released
+                console.log('stop drag')
+                dragging = false;
+            }
+        });
+
         function drawImage() {
             imageCtx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
             let maxCanvasWidth = imageCanvas.width - 2 * margin;
             let maxCanvasHeight = imageCanvas.height - 2 * margin;
             let ratio = Math.min(maxCanvasWidth / currentImage.width, maxCanvasHeight / currentImage.height);
-            let x = (imageCanvas.width - currentImage.width * ratio) / 2;
-            let y = (imageCanvas.height - currentImage.height * ratio) / 2;
+            let x = translateX + (imageCanvas.width - currentImage.width * ratio) / 2;
+            let y = translateY + (imageCanvas.height - currentImage.height * ratio) / 2;
             imageCtx.drawImage(currentImage, x, y, currentImage.width * ratio, currentImage.height * ratio);
         }
 
@@ -136,7 +171,10 @@
                     currentImage.onload = () => {
                         imageCanvas.width = crosshairCanvas.width = canvasContainer.clientWidth;
                         imageCanvas.height = crosshairCanvas.height = canvasContainer.clientHeight;
+                        translateX = 0; // Reset translation to center image
+                        translateY = 0;
                         drawImage();
+                        drawCrosshair(imageCanvas.width / 2, imageCanvas.height / 2); // Center crosshair initially
                     };
                     currentImage.src = e.target.result;
                 };
