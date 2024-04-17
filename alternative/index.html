@@ -52,6 +52,7 @@ let annotations = [];
 let canvas = document.getElementById('imageCanvas');
 let ctx = canvas.getContext('2d');
 let currentImage = null;
+let margin = 20; // Margin around the image
 
 document.getElementById('folderInput').addEventListener('change', function(event) {
     const files = event.target.files;
@@ -97,7 +98,9 @@ canvas.addEventListener('mousemove', function(event) {
 
 function drawImage() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    let ratio = Math.min(canvas.width / currentImage.width, canvas.height / currentImage.height);
+    let maxCanvasWidth = canvas.width - 2 * margin;
+    let maxCanvasHeight = canvas.height - 2 * margin;
+    let ratio = Math.min(maxCanvasWidth / currentImage.width, maxCanvasHeight / currentImage.height);
     let x = (canvas.width - currentImage.width * ratio) / 2;
     let y = (canvas.height - currentImage.height * ratio) / 2;
     ctx.drawImage(currentImage, x, y, currentImage.width * ratio, currentImage.height * ratio);
