@@ -1,6 +1,36 @@
 
-# Image annotation app
+# :fire: Simplest Image Annotation Tool :fire:
+**We created something easy to install and use... [give it a try!](https://franchesoni.github.io/minimalist-annotation/)**
 
+Please ⭐ if you find it useful.
+
+## Current limitations:
+- single class
+- deleting annotations only via `undo` or `clear`
+- no special treatment of predictions
+
+# Change log
+- add help
+- add load annotations button
+- add textbox
+- implement bounding box code
+- add undo button
+- create annotation tool for clicks
+    - allows for downloads
+    - positive / negative clicks
+    - panning
+    - zooming
+- display jpg images on a folder locally
+- open a folder locally
+
+# Roadmap
+- allow to load bbox predictions
+- allow to load masks (imgname_mask_pred.png)
+- allow to validate masks
+- add transparency slider for mask visualization
+- allow to flag masks as correct
+
+# The vision  
 This image annotation app is simple.
 It allows to draw bounding boxes and points.
 
@@ -30,21 +60,3 @@ We consider a few learning paradigms to be run from the annotations.
 Catches:
 - if you don't draw exhaustive bounding boxes, you're introducing noise to the training of the object detector. 
 - if you think about using IIS later, you need to annotate each and every image you want to include in your training set
-
-# Change log
-- add load annotations button
-- add textbox
-- implement bounding box code
-- add undo button
-- create annotation tool for clicks
-    - allows for downloads
-    - positive / negative clicks
-    - panning
-    - zooming
-- display jpg images on a folder locally
-- open a folder locally
-
-# Roadmap
-- allow to load masks (imgname_mask_pred.png)
-- add transparency slider for mask visualization
-- allow to flag masks as correct
