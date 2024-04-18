@@ -32,16 +32,17 @@ Catches:
 - if you think about using IIS later, you need to annotate each and every image you want to include in your training set
 
 # Change log
-- open a folder locally
-- display jpg images on a folder locally
+- add undo button
 - create annotation tool for clicks
     - allows for downloads
     - positive / negative clicks
     - panning
     - zooming
+- display jpg images on a folder locally
+- open a folder locally
 
 # Roadmap
-- add undo button
+- implement bounding box code
 - add load annotations button
 - add textbox
 - allow to load masks (imgname_mask_pred.png)

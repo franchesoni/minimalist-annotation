@@ -51,6 +51,7 @@
     <button id="nextButton" class="hidden">Next</button>
     <button id="resetViewButton" class="hidden">Reset View</button>
     <button id="clearButton" class="hidden">Clear</button>
+    <button id="undoButton" class="hidden">Undo</button>
     <button id="downloadButton" class="hidden">Save</button>
     <div id="canvasContainer">
         <canvas id="imageCanvas"></canvas>
@@ -96,6 +97,7 @@
                 document.getElementById('nextButton').classList.remove('hidden');
                 document.getElementById('resetViewButton').classList.remove('hidden');
                 document.getElementById('clearButton').classList.remove('hidden');
+                document.getElementById('undoButton').classList.remove('hidden');
                 document.getElementById('downloadButton').classList.remove('hidden');
                 document.getElementById('imageCanvas').classList.remove('hidden');
                 document.getElementById('crosshairCanvas').classList.remove('hidden');
@@ -127,6 +129,11 @@
 
         document.getElementById('clearButton').addEventListener('click', function () {
             annotations[currentIndex] = [];
+            drawPoints();
+        });
+    
+        document.getElementById('undoButton').addEventListener('click', function () {
+            annotations[currentIndex].pop();
             drawPoints();
         });
 
