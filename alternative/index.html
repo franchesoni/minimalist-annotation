@@ -67,11 +67,12 @@
         <canvas id="tmpCanvas"></canvas>
         <canvas id="crosshairCanvas"></canvas>
     </div>
+    <input type="text" id="annotationDescription" class="hidden">
 
     <script>
         let imageFiles = [];
         let currentIndex = 0;
-        let annotations = [];
+        let annotations = {};
         let imageCanvas = document.getElementById('imageCanvas');
         let crosshairCanvas = document.getElementById('crosshairCanvas');
         let annCanvas = document.getElementById('annCanvas');
@@ -92,16 +93,18 @@
         let annotationMode = 'point';  // or 'bbox'
         let bboxStart = null;
         let drawingBbox = false;
+        let navigationActive = true;
+        let currentFile = null;
 
         document.getElementById('selectFolderButton').addEventListener('click', function () {
             document.getElementById('folderInput').click();
         });
 
         document.addEventListener('keydown', function (event) {
-            if (event.key === 'a' || event.key === 'A' || event.key === 'ArrowLeft') {
+            if (navigationActive && (event.key === 'a' || event.key === 'A' || event.key === 'ArrowLeft')) {
                 // Simulate a click on the "Previous" button
                 document.getElementById('prevButton').click();
-            } else if (event.key === 'd' || event.key === 'D' || event.key === 'ArrowRight') {
+            } else if (navigationActive && (event.key === 'd' || event.key === 'D' || event.key === 'ArrowRight')) {
                 // Simulate a click on the "Next" button
                 document.getElementById('nextButton').click();
             }
@@ -110,12 +113,11 @@
         document.getElementById('folderInput').addEventListener('change', function (event) {
             const files = event.target.files;
             imageFiles = [];
-            annotations = [];
+            annotations = {};
 
             for (const file of files) {
                 if (file.type.startsWith('image/')) {
                     imageFiles.push(file);
-                    annotations.push([]);
                 }
             }
 
@@ -127,7 +129,9 @@
                 document.getElementById('clearButton').classList.remove('hidden');
                 document.getElementById('undoButton').classList.remove('hidden');
                 document.getElementById('downloadButton').classList.remove('hidden');
+                document.getElementById('toggleModeButton').classList.remove('hidden');
                 document.getElementById('canvasContainer').classList.remove('hidden');
+                document.getElementById('annotationDescription').classList.remove('hidden');
                 showImage();
             } else {
                 alert('No images found in the folder.');
@@ -160,33 +164,40 @@
 
         document.getElementById('resetViewButton').addEventListener('click', function () {
             resetView();
-            drawPoints();
+            renderAnnotations();
         });
 
         document.getElementById('clearButton').addEventListener('click', function () {
-            annotations[currentIndex] = [];
-            drawPoints();
+            annotations[currentFile] = [];
+            renderAnnotations();
         });
 
         document.getElementById('undoButton').addEventListener('click', function () {
-            annotations[currentIndex].pop();
-            drawPoints();
+            annotations[currentFile].pop();
+            renderAnnotations();
         });
 
         document.getElementById('downloadButton').addEventListener('click', function () {
             downloadAnnotations();
         });
 
-        function downloadAnnotations() {
-            let annotationsToDownload = {};
-            imageFiles.forEach((file, index) => {
-                if (annotations[index] && annotations[index].length > 0) { // Only include images with annotations
-                    annotationsToDownload[file.name] = annotations[index];
-                }
+        document.getElementById('annotationDescription').addEventListener('focus', function () {
+            // remove previous description
+            navigationActive = false;
+            annotations[currentFile] = annotations[currentFile].filter(ann => ann.type !== 'desc');
+        });
+        document.getElementById('annotationDescription').addEventListener('blur', function () {
+            annotations[currentFile].push({
+                type: 'desc',
+                description: this.value
             });
+            renderAnnotations();
+            navigationActive = true;
+        });
 
+        function downloadAnnotations() {
             // Convert the annotations object to a JSON string
-            let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(annotationsToDownload));
+            let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(annotations));
             let downloadAnchorNode = document.createElement('a');
             downloadAnchorNode.setAttribute("href", dataStr);
             downloadAnchorNode.setAttribute("download", "annotations.json");
@@ -217,7 +228,7 @@
                 translateY += dy;
                 lastX = event.offsetX;
                 lastY = event.offsetY;
-                drawPoints();
+                renderAnnotations();
             }
         });
 
@@ -287,22 +298,18 @@
             // translation comes from the equality (tx - eo) / s1 = (tx2 - eo) / s2 which means that the relative position of eo wrt tx should be constant
             translateX = (translateX - event.offsetX) * zoomFactor + event.offsetX
             translateY = (translateY - event.offsetY) * zoomFactor + event.offsetY
-            drawPoints();
+            renderAnnotations();
         })
 
         function addPoint(x, y, type) {
             console.log('Adding point at', x, y, type);
             // Save the annotation
-            annotations[currentIndex].push({
+            annotations[currentFile].push({
                 imgX: x,
                 imgY: y,
                 type: type,
             });
-            console.log(annotations[currentIndex])
-
-
-
-            drawPoints(); // Update the canvas with new point
+            renderAnnotations(); // Update the canvas with new point
         }
 
         function addBoundingBox(start, end) {
@@ -313,17 +320,18 @@
                 y2: Math.max(start.y, end.y),
                 type: 'bbox'
             };
-            annotations[currentIndex].push(bbox);
-            drawPoints();
+            annotations[currentFile].push(bbox);
+            renderAnnotations();
         }
 
 
-        function drawPoints() {
+        function renderAnnotations() {
             tmpCtx.clearRect(0, 0, tmpCanvas.width, tmpCanvas.height);
             annCtx.clearRect(0, 0, annCanvas.width, annCanvas.height);
             drawImage(); // Redraw the image first
 
-            annotations[currentIndex].forEach(ann => {
+            let deleteDescription = true;
+            annotations[currentFile].forEach(ann => {
                 if (ann.type === 'bbox') {
                     annCtx.strokeStyle = 'green';
                     annCtx.lineWidth = 4;
@@ -332,6 +340,9 @@
                     let x2 = ann.x2 * scale + translateX;
                     let y2 = ann.y2 * scale + translateY;
                     annCtx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+                } else if (ann.type === 'desc') {
+                    deleteDescription = false;
+                    document.getElementById('annotationDescription').value = ann.description;
                 } else {
                     if (ann.type === 'positive') {
                         annCtx.fillStyle = 'green';
@@ -343,6 +354,9 @@
                     annCtx.fillRect(x - rs, y - rs, 2 * rs + 1, 2 * rs + 1);
                 }
             });
+            if (deleteDescription) {
+                document.getElementById('annotationDescription').value = '';
+            }
         }
 
 
@@ -378,6 +392,8 @@
 
         function showImage() {
             if (currentIndex >= 0 && currentIndex < imageFiles.length) {
+                currentFile = imageFiles[currentIndex].name;
+                annotations[currentFile] = annotations[currentFile] || [];
                 const fileReader = new FileReader();
                 fileReader.onload = function (e) {
                     currentImage = new Image();
@@ -388,7 +404,7 @@
                         // Reset zoom and translation
                         resetView()
 
-                        drawPoints();
+                        renderAnnotations();
                     };
                     currentImage.src = e.target.result;
                 };
