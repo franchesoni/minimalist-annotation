@@ -32,6 +32,9 @@ Catches:
 - if you think about using IIS later, you need to annotate each and every image you want to include in your training set
 
 # Change log
+- add load annotations button
+- add textbox
+- implement bounding box code
 - add undo button
 - create annotation tool for clicks
     - allows for downloads
@@ -42,9 +45,6 @@ Catches:
 - open a folder locally
 
 # Roadmap
-- implement bounding box code
-- add load annotations button
-- add textbox
 - allow to load masks (imgname_mask_pred.png)
 - add transparency slider for mask visualization
 - allow to flag masks as correct
