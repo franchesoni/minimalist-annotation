@@ -51,6 +51,7 @@
     <button id="nextButton" class="hidden">Next</button>
     <button id="resetViewButton" class="hidden">Reset View</button>
     <button id="clearButton" class="hidden">Clear</button>
+    <button id="downloadButton" class="hidden">Save</button>
     <div id="canvasContainer">
         <canvas id="imageCanvas"></canvas>
         <canvas id="clickCanvas"></canvas>
@@ -95,6 +96,7 @@
                 document.getElementById('nextButton').classList.remove('hidden');
                 document.getElementById('resetViewButton').classList.remove('hidden');
                 document.getElementById('clearButton').classList.remove('hidden');
+                document.getElementById('downloadButton').classList.remove('hidden');
                 document.getElementById('imageCanvas').classList.remove('hidden');
                 document.getElementById('crosshairCanvas').classList.remove('hidden');
                 document.getElementById('clickCanvas').classList.remove('hidden');
@@ -127,6 +129,29 @@
             annotations[currentIndex] = [];
             drawPoints();
         });
+
+        document.getElementById('downloadButton').addEventListener('click', function () {
+            downloadAnnotations();
+        });
+
+        function downloadAnnotations() {
+            let annotationsToDownload = {};
+            imageFiles.forEach((file, index) => {
+                if (annotations[index] && annotations[index].length > 0) { // Only include images with annotations
+                    annotationsToDownload[file.name] = annotations[index];
+                }
+            });
+
+            // Convert the annotations object to a JSON string
+            let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(annotationsToDownload));
+            let downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "annotations.json");
+            document.body.appendChild(downloadAnchorNode); // Required for Firefox
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+
 
         // mouse move
         crosshairCanvas.addEventListener('mousemove', function (event) {
