@@ -49,6 +49,7 @@
     <input type="file" id="folderInput" webkitdirectory directory multiple>
     <button id="prevButton" class="hidden">Previous</button>
     <button id="nextButton" class="hidden">Next</button>
+    <button id="resetViewButton" class="hidden">Reset View</button>
     <div id="canvasContainer">
         <canvas id="imageCanvas"></canvas>
         <canvas id="clickCanvas"></canvas>
@@ -91,6 +92,7 @@
                 document.getElementById('folderInput').style.display = 'none';
                 document.getElementById('prevButton').classList.remove('hidden');
                 document.getElementById('nextButton').classList.remove('hidden');
+                document.getElementById('resetViewButton').classList.remove('hidden');
                 document.getElementById('imageCanvas').classList.remove('hidden');
                 document.getElementById('crosshairCanvas').classList.remove('hidden');
                 document.getElementById('clickCanvas').classList.remove('hidden');
@@ -112,6 +114,11 @@
                 currentIndex--;
                 showImage();
             }
+        });
+
+        document.getElementById('resetViewButton').addEventListener('click', function () {
+            resetView();
+            drawPoints();
         });
 
         // mouse move
@@ -231,6 +238,13 @@
             crosshairCtx.lineTo(crosshairCanvas.width, y);
             crosshairCtx.stroke();
         }
+        function resetView() {
+            let maxCanvasWidth = imageCanvas.width - 2 * margin;
+            let maxCanvasHeight = imageCanvas.height - 2 * margin;
+            scale = Math.min(maxCanvasWidth / currentImage.width, maxCanvasHeight / currentImage.height);
+            translateX = (imageCanvas.width - currentImage.width * scale) / 2;
+            translateY = (imageCanvas.height - currentImage.height * scale) / 2;
+        }
 
         function showImage() {
             if (currentIndex >= 0 && currentIndex < imageFiles.length) {
@@ -242,14 +256,9 @@
                         imageCanvas.height = crosshairCanvas.height = clickCanvas.height = canvasContainer.clientHeight;
 
                         // Reset zoom and translation
-                        translateX = 0; // Reset translation to center image
-                        translateY = 0;
-                        let maxCanvasWidth = imageCanvas.width - 2 * margin;
-                        let maxCanvasHeight = imageCanvas.height - 2 * margin;
-                        scale = Math.min(maxCanvasWidth / currentImage.width, maxCanvasHeight / currentImage.height);
-                        translateX = (imageCanvas.width - currentImage.width * scale) / 2;
-                        translateY = (imageCanvas.height - currentImage.height * scale) / 2;
-                        drawImage();
+                        resetView()
+
+                        drawPoints();
                     };
                     currentImage.src = e.target.result;
                 };
