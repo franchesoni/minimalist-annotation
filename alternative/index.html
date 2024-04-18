@@ -156,8 +156,14 @@
             drawImage();
         })
 
+        function applyClamping() {
+            translateX = Math.max(Math.min(imageCanvas.width - margin, translateX), margin - currentImage.width * scale)
+            translateY = Math.max(Math.min(imageCanvas.height - margin, translateY), margin - currentImage.height * scale)
+        }
+
         function drawImage() {
             imageCtx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+            applyClamping()
             imageCtx.drawImage(currentImage, translateX, translateY, currentImage.width * scale, currentImage.height * scale);
         }
 
