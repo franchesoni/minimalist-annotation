@@ -69,6 +69,7 @@
         let lastY = 0;
         let translateX = 0;
         let translateY = 0;
+        let scale = 1;
 
         document.getElementById('folderInput').addEventListener('change', function (event) {
             const files = event.target.files;
@@ -142,14 +143,22 @@
             }
         });
 
+        crosshairCanvas.addEventListener("wheel", function (event) {
+            event.preventDefault();
+            const zoomSpeed = 0.05;
+            let delta = -Math.sign(event.deltaY) * zoomSpeed;
+            let zoomFactor = Math.exp(delta);
+            scale *= zoomFactor;
+
+            // translation comes from the equality (tx - eo) / s1 = (tx2 - eo) / s2 which means that the relative position of eo wrt tx should be constant
+            translateX = (translateX - event.offsetX) * zoomFactor + event.offsetX
+            translateY = (translateY - event.offsetY) * zoomFactor + event.offsetY
+            drawImage();
+        })
+
         function drawImage() {
             imageCtx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
-            let maxCanvasWidth = imageCanvas.width - 2 * margin;
-            let maxCanvasHeight = imageCanvas.height - 2 * margin;
-            let ratio = Math.min(maxCanvasWidth / currentImage.width, maxCanvasHeight / currentImage.height);
-            let x = translateX + (imageCanvas.width - currentImage.width * ratio) / 2;
-            let y = translateY + (imageCanvas.height - currentImage.height * ratio) / 2;
-            imageCtx.drawImage(currentImage, x, y, currentImage.width * ratio, currentImage.height * ratio);
+            imageCtx.drawImage(currentImage, translateX, translateY, currentImage.width * scale, currentImage.height * scale);
         }
 
         function drawCrosshair(x, y) {
@@ -173,6 +182,11 @@
                         imageCanvas.height = crosshairCanvas.height = canvasContainer.clientHeight;
                         translateX = 0; // Reset translation to center image
                         translateY = 0;
+                        let maxCanvasWidth = imageCanvas.width - 2 * margin;
+                        let maxCanvasHeight = imageCanvas.height - 2 * margin;
+                        scale = Math.min(maxCanvasWidth / currentImage.width, maxCanvasHeight / currentImage.height);
+                        translateX = (imageCanvas.width - currentImage.width * scale) / 2;
+                        translateY = (imageCanvas.height - currentImage.height * scale) / 2;
                         drawImage();
                         drawCrosshair(imageCanvas.width / 2, imageCanvas.height / 2); // Center crosshair initially
                     };
