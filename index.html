@@ -142,8 +142,7 @@
                     using `Save` and `Load`.
                 </li>
             </ul>
-            <p><strong>Privacy:</strong>The app is just frontend, client-side HTML. The "uploaded" images are only made available to your browser. Check the <a href="https://github.com/franchesoni/minimalist-annotation/blob/main/index.html">index.html</a> if in doubt.</p>
-            <p><strong>Feedback:</strong> <a href="https://github.com/franchesoni/minimalist-annotation">repository</a>, <a href="mailto:marchesoniacland@gmail.com">email</a></p>
+                        <p><strong>Feedback:</strong> <a href="https://github.com/franchesoni/minimalist-annotation">repository</a>, <a href="mailto:marchesoniacland@gmail.com">email</a></p>
         </div>
     </div>
 
@@ -159,6 +158,8 @@
         <button id="loadAnnotationsButton" class="hidden">Load Annotations</button>
         <button id="helpButton" class="hidden">?</button>
     </div>
+    <p id="privacy" style="width: 50%;text-align: justify;"><strong>Privacy note:</strong> The app is just frontend, client-side HTML. 
+        The "uploaded" images are only made available to your browser. Check the <a href="https://github.com/franchesoni/minimalist-annotation/blob/main/index.html">source</a> if in doubt.</p>
     <div id="canvasContainer" class="hidden">
         <canvas id="imageCanvas"></canvas>
         <canvas id="annCanvas"></canvas>
@@ -224,6 +225,7 @@
 
             if (imageFiles.length > 0) {
                 document.getElementById('selectFolderButton').style.display = 'none';
+                document.getElementById('privacy').style.display = 'none';
                 document.getElementById('prevButton').classList.remove('hidden');
                 document.getElementById('nextButton').classList.remove('hidden');
                 document.getElementById('resetViewButton').classList.remove('hidden');
