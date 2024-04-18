@@ -51,6 +51,7 @@
     <button id="nextButton" class="hidden">Next</button>
     <div id="canvasContainer">
         <canvas id="imageCanvas"></canvas>
+        <canvas id="clickCanvas"></canvas>
         <canvas id="crosshairCanvas"></canvas>
     </div>
 
@@ -60,8 +61,10 @@
         let annotations = [];
         let imageCanvas = document.getElementById('imageCanvas');
         let crosshairCanvas = document.getElementById('crosshairCanvas');
+        let clickCanvas = document.getElementById('clickCanvas');
         let imageCtx = imageCanvas.getContext('2d');
         let crosshairCtx = crosshairCanvas.getContext('2d');
+        let clickCtx = clickCanvas.getContext('2d');
         let currentImage = null;
         let margin = 20; // Margin around the image
         let dragging = false;
@@ -109,11 +112,10 @@
             }
         });
 
+        // mouse move
         crosshairCanvas.addEventListener('mousemove', function (event) {
             drawCrosshair(event.offsetX, event.offsetY);
-        });
-
-        window.addEventListener('mousemove', function (event) {
+            clicking = false;  // mouse moved, not a click
             if (dragging) {
                 let dx = event.offsetX - lastX;
                 let dy = event.offsetY - lastY;
@@ -125,20 +127,32 @@
             }
         });
 
-        window.addEventListener('mousedown', function (event) {
+        // click
+        crosshairCanvas.addEventListener('mousedown', function (event) {
+            clicking = true;
             if (event.button === 0) { // Check if left mouse button is pressed
-                console.log('dragging...')
                 dragging = true;
                 lastX = event.offsetX;
                 lastY = event.offsetY;
             }
         });
 
+        crosshairCanvas.addEventListener('mouseup', function (event) {
+            if (clicking) {
+                if (event.button === 0) { // Ensure the left mouse button was released
+                    addPoint((event.offsetX-translateX)/scale,  (event.offsetY-translateY)/scale, 'positive');
+                }
+                if (event.button === 2) { // Ensure the right mouse button was released
+                    event.preventDefault(); // Prevent the context menu
+                    addPoint(currentImage.width*(event.offsetX-translateX)/scale,  currentImage.height*(event.offsetY-translateY)/scale, 'negative');
+                }
+                clicking = false;
+            }
 
+        });
 
         window.addEventListener('mouseup', function (event) {
             if (event.button === 0) { // Ensure the left mouse button was released
-                console.log('stop drag')
                 dragging = false;
             }
         });
@@ -155,6 +169,47 @@
             translateY = (translateY - event.offsetY) * zoomFactor + event.offsetY
             drawImage();
         })
+
+        function addPoint(x, y, type) {
+            console.log('Adding point at', x, y, type);
+        }
+        //     // Calculate the image-relative coordinates
+        //     let rect = imageCanvas.getBoundingClientRect();
+        //     let scaleX = currentImage.width / rect.width; // Relationship bitmap vs. element for X
+        //     let scaleY = currentImage.height / rect.height; // Relationship bitmap vs. element for Y
+
+        //     let imgX = (x - translateX - rect.left) * scaleX;
+        //     let imgY = (y - translateY - rect.top) * scaleY;
+
+        //     // Save the annotation
+        //     annotations.push({
+        //         imgX: imgX,
+        //         imgY: imgY,
+        //         type: type,
+        //         imageIndex: currentIndex
+        //     });
+
+        //     drawPoints(); // Update the canvas with new point
+        // }
+
+        // function drawPoints() {
+        //     clickCtx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+        //     drawImage(); // Redraw the image first
+
+        //     annotations.forEach(point => {
+        //         if (point.imageIndex === currentIndex) {
+        //             let x = (point.imgX / scale) + translateX;
+        //             let y = (point.imgY / scale) + translateY;
+
+        //             clickCtx.beginPath();
+        //             clickCtx.arc(x, y, 5, 0, 2 * Math.PI, false);
+        //             clickCtx.fillStyle = point.type === 'positive' ? 'green' : 'red';
+        //             clickCtx.fill();
+        //         }
+        //     });
+        // }
+
+
 
         function applyClamping() {
             translateX = Math.max(Math.min(imageCanvas.width - margin, translateX), margin - currentImage.width * scale)
@@ -186,6 +241,8 @@
                     currentImage.onload = () => {
                         imageCanvas.width = crosshairCanvas.width = canvasContainer.clientWidth;
                         imageCanvas.height = crosshairCanvas.height = canvasContainer.clientHeight;
+
+                        // Reset zoom and translation
                         translateX = 0; // Reset translation to center image
                         translateY = 0;
                         let maxCanvasWidth = imageCanvas.width - 2 * margin;
