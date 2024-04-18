@@ -73,7 +73,7 @@
         let translateX = 0;
         let translateY = 0;
         let scale = 1;
-        const rs = 2;  // radius of the square representing the point
+        const rs = 5;  // radius of the square representing the point
 
         document.getElementById('folderInput').addEventListener('change', function (event) {
             const files = event.target.files;
@@ -129,6 +129,12 @@
             }
         });
 
+
+        window.addEventListener('contextmenu', function (event) {
+            console.log('contextmenu window')
+            event.preventDefault();
+        })
+
         // click
         crosshairCanvas.addEventListener('mousedown', function (event) {
             clicking = true;
@@ -145,8 +151,7 @@
                     addPoint((event.offsetX - translateX) / scale, (event.offsetY - translateY) / scale, 'positive');
                 }
                 if (event.button === 2) { // Ensure the right mouse button was released
-                    event.preventDefault(); // Prevent the context menu
-                    addPoint(currentImage.width * (event.offsetX - translateX) / scale, currentImage.height * (event.offsetY - translateY) / scale, 'negative');
+                    addPoint((event.offsetX - translateX) / scale, (event.offsetY - translateY) / scale, 'negative');
                 }
                 clicking = false;
             }
