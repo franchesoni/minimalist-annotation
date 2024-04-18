@@ -52,6 +52,7 @@
 
     <button id="selectFolderButton" style="font-size: large; padding: 15px 30px;">Select Folder</button>
     <input type="file" id="folderInput" class="hidden" webkitdirectory directory multiple>
+    <input type="file" id="loadFileInput" class="hidden" accept=".json">
     <div id="buttonContainer">
         <button id="toggleModeButton" class="hidden">Switch to Bounding Box Mode</button>
         <button id="prevButton" class="hidden">Previous</button>
@@ -59,7 +60,8 @@
         <button id="resetViewButton" class="hidden">Reset View</button>
         <button id="clearButton" class="hidden">Clear</button>
         <button id="undoButton" class="hidden">Undo</button>
-        <button id="downloadButton" class="hidden">Save</button>
+        <button id="downloadButton" class="hidden">Save Annotations</button>
+        <button id="loadAnnotationsButton" class="hidden">Load Annotations</button>
     </div>
     <div id="canvasContainer" class="hidden">
         <canvas id="imageCanvas"></canvas>
@@ -132,10 +134,40 @@
                 document.getElementById('toggleModeButton').classList.remove('hidden');
                 document.getElementById('canvasContainer').classList.remove('hidden');
                 document.getElementById('annotationDescription').classList.remove('hidden');
+                document.getElementById('loadAnnotationsButton').classList.remove('hidden');
                 showImage();
             } else {
                 alert('No images found in the folder.');
             }
+        });
+
+        document.getElementById('loadAnnotationsButton').addEventListener('click', function() {
+            document.getElementById('loadFileInput').click();  // Trigger file selection
+        });
+
+        document.getElementById('loadFileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file && file.type === "application/json") {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const loadedAnnotations = JSON.parse(e.target.result);
+                        if (typeof loadedAnnotations === "object") {
+                            annotations = loadedAnnotations;
+                            renderAnnotations();  // Update the canvas with loaded annotations
+                            alert('Annotations loaded successfully.');
+                        } else {
+                            throw new Error('Format is not correct');
+                        }
+                    } catch (err) {
+                        alert('Failed to load annotations: ' + err.message);
+                    }
+                };
+                reader.readAsText(file);
+            } else {
+                alert('Please select a valid JSON file.');
+            }
+            this.value = '';  // Reset the input after the file is loaded
         });
 
         document.getElementById('toggleModeButton').addEventListener('click', function () {
