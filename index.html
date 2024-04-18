@@ -448,7 +448,7 @@
 
         crosshairCanvas.addEventListener("wheel", function (event) {
             event.preventDefault();
-            const zoomSpeed = 0.05;
+            const zoomSpeed = 0.10;
             let delta = -Math.sign(event.deltaY) * zoomSpeed;
             let zoomFactor = Math.exp(delta);
             scale *= zoomFactor;
