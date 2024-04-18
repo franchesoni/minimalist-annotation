@@ -47,6 +47,7 @@
 <body>
 
     <input type="file" id="folderInput" webkitdirectory directory multiple>
+    <button id="toggleModeButton">Switch to Bounding Box Mode</button>
     <button id="prevButton" class="hidden">Previous</button>
     <button id="nextButton" class="hidden">Next</button>
     <button id="resetViewButton" class="hidden">Reset View</button>
@@ -55,7 +56,8 @@
     <button id="downloadButton" class="hidden">Save</button>
     <div id="canvasContainer">
         <canvas id="imageCanvas"></canvas>
-        <canvas id="clickCanvas"></canvas>
+        <canvas id="annCanvas"></canvas>
+        <canvas id="tmpCanvas"></canvas>
         <canvas id="crosshairCanvas"></canvas>
     </div>
 
@@ -65,10 +67,12 @@
         let annotations = [];
         let imageCanvas = document.getElementById('imageCanvas');
         let crosshairCanvas = document.getElementById('crosshairCanvas');
-        let clickCanvas = document.getElementById('clickCanvas');
+        let annCanvas = document.getElementById('annCanvas');
+        let tmpCanvas = document.getElementById('tmpCanvas');
         let imageCtx = imageCanvas.getContext('2d');
         let crosshairCtx = crosshairCanvas.getContext('2d');
-        let clickCtx = clickCanvas.getContext('2d');
+        let annCtx = annCanvas.getContext('2d');
+        let tmpCtx = tmpCanvas.getContext('2d');
         let currentImage = null;
         let margin = 20; // Margin around the image
         let dragging = false;
@@ -78,6 +82,10 @@
         let translateY = 0;
         let scale = 1;
         const rs = 5;  // radius of the square representing the point
+        let annotationMode = 'point';  // or 'bbox'
+        let bboxStart = null;
+        let drawingBbox = false;
+
 
         document.getElementById('folderInput').addEventListener('change', function (event) {
             const files = event.target.files;
@@ -101,10 +109,21 @@
                 document.getElementById('downloadButton').classList.remove('hidden');
                 document.getElementById('imageCanvas').classList.remove('hidden');
                 document.getElementById('crosshairCanvas').classList.remove('hidden');
-                document.getElementById('clickCanvas').classList.remove('hidden');
+                document.getElementById('annCanvas').classList.remove('hidden');
+                document.getElementById('tmpCanvas').classList.remove('hidden');
                 showImage();
             } else {
                 alert('No images found in the folder.');
+            }
+        });
+
+        document.getElementById('toggleModeButton').addEventListener('click', function() {
+            if (annotationMode === 'point') {
+                annotationMode = 'bbox';
+                this.textContent = 'Switch to Point Mode';
+            } else {
+                annotationMode = 'point';
+                this.textContent = 'Switch to Bounding Box Mode';
             }
         });
 
@@ -164,6 +183,16 @@
         crosshairCanvas.addEventListener('mousemove', function (event) {
             drawCrosshair(event.offsetX, event.offsetY);
             clicking = false;  // mouse moved, not a click
+            if (drawingBbox) {
+                tmpCtx.clearRect(0, 0, tmpCanvas.width, tmpCanvas.height);
+                tmpCtx.strokeStyle = 'violet';
+                tmpCtx.lineWidth = 4;
+                let x1 = Math.min(event.offsetX, bboxStart.x * scale + translateX);
+                let y1 = Math.min(event.offsetY, bboxStart.y * scale + translateY);
+                let x2 = Math.max(event.offsetX, bboxStart.x * scale + translateX);
+                let y2 = Math.max(event.offsetY, bboxStart.y * scale + translateY);
+                tmpCtx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+            }
             if (dragging) {
                 let dx = event.offsetX - lastX;
                 let dy = event.offsetY - lastY;
@@ -194,10 +223,31 @@
         crosshairCanvas.addEventListener('mouseup', function (event) {
             if (clicking) {
                 if (event.button === 0) { // Ensure the left mouse button was released
-                    addPoint((event.offsetX - translateX) / scale, (event.offsetY - translateY) / scale, 'positive');
+                    if (annotationMode === 'point') {
+                        addPoint((event.offsetX - translateX) / scale, (event.offsetY - translateY) / scale, 'positive');
+                    } else if (annotationMode === 'bbox') {
+                        if (!bboxStart) {
+                            // First click sets the start of the bounding box
+                            bboxStart = { x: (event.offsetX - translateX) / scale, y: (event.offsetY - translateY) / scale };
+                            drawingBbox = true;
+                        } else {
+                            // Second click sets the end of the bounding box and creates it
+                            addBoundingBox(bboxStart, { x: (event.offsetX - translateX) / scale, y: (event.offsetY - translateY) / scale });
+                            bboxStart = null;  // Reset for next bounding box
+                            drawingBbox = false;
+                        }
+                    
+                    }
                 }
                 if (event.button === 2) { // Ensure the right mouse button was released
-                    addPoint((event.offsetX - translateX) / scale, (event.offsetY - translateY) / scale, 'negative');
+                    if (annotationMode === 'point') {
+                        addPoint((event.offsetX - translateX) / scale, (event.offsetY - translateY) / scale, 'negative');
+                    } else if (annotationMode === 'bbox') {
+                        // Right click does nothing in bbox mode
+                        bboxStart = null;
+                        drawingBbox = false;
+                        tmpCtx.clearRect(0, 0, tmpCanvas.width, tmpCanvas.height);
+                    }
                 }
                 clicking = false;
             }
@@ -238,19 +288,43 @@
             drawPoints(); // Update the canvas with new point
         }
 
+        function addBoundingBox(start, end) {
+            let bbox = {
+                x1: Math.min(start.x, end.x),
+                y1: Math.min(start.y, end.y),
+                x2: Math.max(start.x, end.x),
+                y2: Math.max(start.y, end.y),
+                type: 'bbox'
+            };
+            annotations[currentIndex].push(bbox);
+            drawPoints();
+        }
+
+
         function drawPoints() {
-            clickCtx.clearRect(0, 0, clickCanvas.width, clickCanvas.height);
+            tmpCtx.clearRect(0, 0, tmpCanvas.width, tmpCanvas.height);
+            annCtx.clearRect(0, 0, annCanvas.width, annCanvas.height);
             drawImage(); // Redraw the image first
 
-            annotations[currentIndex].forEach(point => {
-                if (point.type === 'positive') {
-                    clickCtx.fillStyle = 'green';
+            annotations[currentIndex].forEach(ann => {
+                if (ann.type === 'bbox') {
+                    annCtx.strokeStyle = 'green';
+                    annCtx.lineWidth = 4;
+                    let x1 = ann.x1 * scale + translateX;
+                    let y1 = ann.y1 * scale + translateY;
+                    let x2 = ann.x2 * scale + translateX;
+                    let y2 = ann.y2 * scale + translateY;
+                    annCtx.strokeRect(x1, y1, x2 - x1, y2 - y1);
                 } else {
-                    clickCtx.fillStyle = 'red';
+                    if (ann.type === 'positive') {
+                        annCtx.fillStyle = 'green';
+                    } else if (ann.type === 'negative') {
+                        annCtx.fillStyle = 'red';
+                    } 
+                    let x = ann.imgX * scale + translateX;
+                    let y = ann.imgY * scale + translateY;
+                    annCtx.fillRect(x - rs, y - rs, 2 * rs + 1, 2 * rs + 1);
                 }
-                let x = point.imgX * scale + translateX;
-                let y = point.imgY * scale + translateY;
-                clickCtx.fillRect(x - rs, y - rs, 2 * rs + 1, 2 * rs + 1);
             });
         }
 
@@ -291,8 +365,8 @@
                 fileReader.onload = function (e) {
                     currentImage = new Image();
                     currentImage.onload = () => {
-                        imageCanvas.width = crosshairCanvas.width = clickCanvas.width = canvasContainer.clientWidth;
-                        imageCanvas.height = crosshairCanvas.height = clickCanvas.height = canvasContainer.clientHeight;
+                        imageCanvas.width = crosshairCanvas.width = annCanvas.width = tmpCanvas.width = canvasContainer.clientWidth;
+                        imageCanvas.height = crosshairCanvas.height = annCanvas.height = tmpCanvas.height = canvasContainer.clientHeight;
 
                         // Reset zoom and translation
                         resetView()
