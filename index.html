@@ -124,13 +124,14 @@
         <div class="modal-content">
             <span class="close">&times;</span>
             <h2>How to Use This App</h2>
-            <p><strong>Navigation</strong></p>
+            <p><strong>Visualization</strong></p>
             <ul>
                 <li><strong>Pan:</strong> Drag with left click.</li>
                 <li><strong>Zoom:</strong> Scroll mouse wheel.</li>
                 <li><strong>Reset View:</strong> Click the "Reset View" button.</li>
                 <li><strong>Go to next image:</strong> Click on `Next`or press `D` or `LeftArrow`</li>
                 <li><strong>Go to previous image:</strong> Click on `Previous` or press `A` or `RightArrow`</li>
+                <li><strong>Overlay mask:</strong> Save along your `imgname.jpg` the mask `imgname_mask.png`.</li>
             </ul>
             <p><strong>Annotation</strong></p>
             <ul>
@@ -138,11 +139,16 @@
                 </li>
                 <li><strong>Box Annotation:</strong> Use two left clicks per bounding box.</li>
                 <li><strong>Point Annotation:</strong> Use both left (positive) and right (negative) clicks.</li>
+                <li><strong>Text Annotation:</strong> Insert or edit the contents of the textbox. </li>
+                <li><strong>Delete Annotation:</strong> Click on `Undo` to remove the last annotation or on `Clear` to
+                    remove all annotations over the current image.</li>
                 <li><strong>Save/Load:</strong> You can save your annotations to a file or load previous annotations
                     using `Save` and `Load`.
                 </li>
             </ul>
-                        <p><strong>Feedback:</strong> <a href="https://github.com/franchesoni/minimalist-annotation">repository</a>, <a href="mailto:marchesoniacland@gmail.com">email</a></p>
+            <p><strong>Feedback:</strong> <a href="https://github.com/franchesoni/minimalist-annotation">repository</a>,
+                <a href="mailto:marchesoniacland@gmail.com">email</a>
+            </p>
         </div>
     </div>
 
@@ -158,10 +164,13 @@
         <button id="loadAnnotationsButton" class="hidden">Load Annotations</button>
         <button id="helpButton" class="hidden">?</button>
     </div>
-    <p id="privacy" style="width: 50%;text-align: justify;"><strong>Privacy note:</strong> The app is just frontend, client-side HTML. 
-        The "uploaded" images are only made available to your browser. Check the <a href="https://github.com/franchesoni/minimalist-annotation/blob/main/index.html">source</a> if in doubt.</p>
+    <p id="privacy" style="width: 50%;text-align: justify;"><strong>Privacy note:</strong> The app is just frontend,
+        client-side HTML.
+        The "uploaded" images are only made available to your browser. Check the <a
+            href="https://github.com/franchesoni/minimalist-annotation/blob/main/index.html">source</a> if in doubt.</p>
     <div id="canvasContainer" class="hidden">
         <canvas id="imageCanvas"></canvas>
+        <canvas id="maskCanvas"></canvas>
         <canvas id="annCanvas"></canvas>
         <canvas id="tmpCanvas"></canvas>
         <canvas id="crosshairCanvas"></canvas>
@@ -169,6 +178,12 @@
     <div class="input-container">
         <input type="text" id="annotationDescription" class="hidden">
     </div>
+    <!-- Add the mask transparency slider -->
+    <div class="slider-container hidden" id="sliderContainer">
+        <label class="slider-label" for="alphaSlider">Mask Opacity:</label>
+        <input type="range" id="alphaSlider" min="0" max="100" value="30">
+    </div>
+
     <input type="file" id="folderInput" class="hidden" webkitdirectory directory multiple>
     <input type="file" id="loadFileInput" class="hidden" accept=".json">
     <script>
@@ -178,12 +193,17 @@
         let imageCanvas = document.getElementById('imageCanvas');
         let crosshairCanvas = document.getElementById('crosshairCanvas');
         let annCanvas = document.getElementById('annCanvas');
+        let maskCanvas = document.getElementById('maskCanvas');
+
         let tmpCanvas = document.getElementById('tmpCanvas');
         let imageCtx = imageCanvas.getContext('2d');
         let crosshairCtx = crosshairCanvas.getContext('2d');
         let annCtx = annCanvas.getContext('2d');
+        let maskCtx = maskCanvas.getContext('2d');
+        maskCtx.globalAlpha = 0.3;  // Default mask transparency
         let tmpCtx = tmpCanvas.getContext('2d');
         let currentImage = null;
+        let maskImage = null;
         let margin = 20; // Margin around the image
         let dragging = false;
         let lastX = 0;
@@ -237,7 +257,8 @@
                 document.getElementById('annotationDescription').classList.remove('hidden');
                 document.getElementById('loadAnnotationsButton').classList.remove('hidden');
                 document.getElementById('helpButton').classList.remove('hidden');
-                showImage();
+                document.getElementById('sliderContainer').classList.remove('hidden');
+                loadSample();
             } else {
                 alert('No images found in the folder.');
             }
@@ -282,7 +303,7 @@
                         const loadedAnnotations = JSON.parse(e.target.result);
                         if (typeof loadedAnnotations === "object") {
                             annotations = loadedAnnotations;
-                            renderAnnotations();  // Update the canvas with loaded annotations
+                            renderAll();  // Update the canvas with loaded annotations
                             alert('Annotations loaded successfully.');
                         } else {
                             throw new Error('Format is not correct');
@@ -311,30 +332,30 @@
         document.getElementById('nextButton').addEventListener('click', function () {
             if (currentIndex < imageFiles.length - 1) {
                 currentIndex++;
-                showImage();
+                loadSample();
             }
         });
 
         document.getElementById('prevButton').addEventListener('click', function () {
             if (currentIndex > 0) {
                 currentIndex--;
-                showImage();
+                loadSample();
             }
         });
 
         document.getElementById('resetViewButton').addEventListener('click', function () {
-            resetView();
-            renderAnnotations();
+            resetViewParams();
+            renderAll();
         });
 
         document.getElementById('clearButton').addEventListener('click', function () {
             annotations[currentFile] = [];
-            renderAnnotations();
+            renderAll();
         });
 
         document.getElementById('undoButton').addEventListener('click', function () {
             annotations[currentFile].pop();
-            renderAnnotations();
+            renderAll();
         });
 
         document.getElementById('downloadButton').addEventListener('click', function () {
@@ -351,7 +372,7 @@
                 type: 'desc',
                 description: this.value
             });
-            renderAnnotations();
+            renderAll();
             navigationActive = true;
         });
 
@@ -366,6 +387,26 @@
             downloadAnchorNode.remove();
         }
 
+        // Function to update mask transparency
+        function updateMaskOpacity(value) {
+            renderAll();
+        }
+
+        // Debounce function to limit excessive updates
+        function debounce(fn, delay) {
+            let timeout;
+            return function (...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => fn(...args), delay);
+            };
+        }
+
+        // Event listener for the slider with a debounced update
+        const alphaSlider = document.getElementById('alphaSlider');
+        const debouncedUpdate = debounce(updateMaskOpacity, 100);
+        alphaSlider.addEventListener('input', function () {
+            debouncedUpdate(this.value);
+        });
 
         // mouse move
         crosshairCanvas.addEventListener('mousemove', function (event) {
@@ -388,7 +429,7 @@
                 translateY += dy;
                 lastX = event.offsetX;
                 lastY = event.offsetY;
-                renderAnnotations();
+                renderAll();
             }
         });
 
@@ -458,7 +499,7 @@
             // translation comes from the equality (tx - eo) / s1 = (tx2 - eo) / s2 which means that the relative position of eo wrt tx should be constant
             translateX = (translateX - event.offsetX) * zoomFactor + event.offsetX
             translateY = (translateY - event.offsetY) * zoomFactor + event.offsetY
-            renderAnnotations();
+            renderAll();
         })
 
         function addPoint(x, y, type) {
@@ -469,7 +510,7 @@
                 imgY: y,
                 type: type,
             });
-            renderAnnotations(); // Update the canvas with new point
+            renderAll(); // Update the canvas with new point
         }
 
         function addBoundingBox(start, end) {
@@ -481,14 +522,19 @@
                 type: 'bbox'
             };
             annotations[currentFile].push(bbox);
-            renderAnnotations();
+            renderAll();
         }
 
 
-        function renderAnnotations() {
+        function renderAll() {
             tmpCtx.clearRect(0, 0, tmpCanvas.width, tmpCanvas.height);
             annCtx.clearRect(0, 0, annCanvas.width, annCanvas.height);
             drawImage(); // Redraw the image first
+            if (maskImage) {
+                maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+                maskCtx.globalAlpha = alphaSlider.value / 100;
+                maskCtx.drawImage(maskImage, translateX, translateY, maskImage.width * scale, maskImage.height * scale);
+            }
 
             let deleteDescription = true;
             annotations[currentFile].forEach(ann => {
@@ -542,7 +588,8 @@
             crosshairCtx.lineTo(crosshairCanvas.width, y);
             crosshairCtx.stroke();
         }
-        function resetView() {
+
+        function resetViewParams() {
             let maxCanvasWidth = imageCanvas.width - 2 * margin;
             let maxCanvasHeight = imageCanvas.height - 2 * margin;
             scale = Math.min(maxCanvasWidth / currentImage.width, maxCanvasHeight / currentImage.height);
@@ -550,7 +597,7 @@
             translateY = (imageCanvas.height - currentImage.height * scale) / 2;
         }
 
-        function showImage() {
+        function loadSample() {
             if (currentIndex >= 0 && currentIndex < imageFiles.length) {
                 currentFile = imageFiles[currentIndex].name;
                 annotations[currentFile] = annotations[currentFile] || [];
@@ -558,17 +605,46 @@
                 fileReader.onload = function (e) {
                     currentImage = new Image();
                     currentImage.onload = () => {
-                        imageCanvas.width = crosshairCanvas.width = annCanvas.width = tmpCanvas.width = canvasContainer.clientWidth;
-                        imageCanvas.height = crosshairCanvas.height = annCanvas.height = tmpCanvas.height = canvasContainer.clientHeight;
+                        imageCanvas.width = crosshairCanvas.width = annCanvas.width = tmpCanvas.width = maskCanvas.width = canvasContainer.clientWidth;
+                        imageCanvas.height = crosshairCanvas.height = annCanvas.height = tmpCanvas.height = maskCanvas.height = canvasContainer.clientHeight;
 
                         // Reset zoom and translation
-                        resetView()
-
-                        renderAnnotations();
+                        resetViewParams()
+                        renderAll();
                     };
                     currentImage.src = e.target.result;
                 };
                 fileReader.readAsDataURL(imageFiles[currentIndex]);
+
+                let baseName = currentFile.replace(/\.[^/.]+$/, "");  // Remove extension
+                let maskName = baseName + '_mask.png';
+                let maskFile = Array.from(imageFiles).find(file => file.name === maskName);
+                if (maskFile) {
+                    const maskReader = new FileReader();
+                    maskReader.onload = function (e) {
+                        maskImage = new Image();
+                        maskImage.onload = () => {
+                            // check that the mask is the same size as the image
+                            if (maskImage.width !== currentImage.width || maskImage.height !== currentImage.height) {
+                                alert('Mask image size does not match the image size. Mask will not be displayed.');
+                                maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+                                document.getElementById('sliderContainer').classList.add('hidden'); // Hide slider if no mask available
+                                return;
+                            }
+
+                            // cleared before
+                            // clamped view params before
+                            document.getElementById('sliderContainer').classList.remove('hidden'); // Show slider if mask available
+                            renderAll();
+                        };
+                        maskImage.src = e.target.result;
+                    };
+                    maskReader.readAsDataURL(maskFile);
+                } else {
+                    maskImage = null;
+                    maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+                    document.getElementById('sliderContainer').classList.add('hidden'); // Hide slider if no mask available
+                }
             } else {
                 alert('Index out of bounds. This should not happen.');
             }
