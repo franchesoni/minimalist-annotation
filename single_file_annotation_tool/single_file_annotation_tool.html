@@ -864,39 +864,35 @@
 
       // Download Annotations
       function downloadAnnotations() {
-        let globalDescription =
-          document.getElementById("globalDescription").value;
-        let description = "";
-        // Remove the color property from all annotations
-        annotations[currentFile].forEach((ann) => {
-          if ("color" in ann) {
-            delete ann.color;
-          }
-          if ("visible" in ann) {
-            delete ann.visible;
-          }
-          // copy all the description if there
-          if (
-            ann.type == "bbox" ||
-            ann.type == "positive" ||
-            ann.type == "negative"
-          ) {
-            description += ann.description;
-            description += "\n";
-          }
-        });
+        let Dannotations = annotations;
 
-        annotations[currentFile].forEach((ann) => {
-          if (ann.type == "desc") {
-            ann.description = ann.desc;
-            ann.globalDescription = globalDescription;
+        for (File in Dannotations) {
+          let description = "";
+          for (annotation in Dannotations[File]) {
+            let ann = Dannotations[File][annotation];
+            if ("color" in ann) {
+              delete ann.color;
+            }
+            if ("visible" in ann) {
+              delete ann.visible;
+            }
+            if (
+              ann.type == "bbox" ||
+              ann.type == "positive" ||
+              ann.type == "negative"
+            ) {
+              description += ann.description;
+              description += "\n";
+            }
           }
-        });
+          console.log("DESCRIPTION : ", description);
+          Dannotations[File][2].description = description;
+        }
 
         // Convert the annotations object to a JSON string
         let dataStr =
           "data:text/json;charset=utf-8," +
-          encodeURIComponent(JSON.stringify(annotations));
+          encodeURIComponent(JSON.stringify(Dannotations));
         let downloadAnchorNode = document.createElement("a");
         downloadAnchorNode.setAttribute("href", dataStr);
         downloadAnchorNode.setAttribute("download", "annotations.json");
