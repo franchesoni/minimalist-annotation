@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Annotation Made by AILab</title>
+    <style>
+      body {
+        background-color: #1d1c1cfa;
+        color: #e0e0e0;
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+      }
+
+      .button-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 10px;
+        margin-top: 10px;
+      }
+
+      #visionAllButton {
+        font-size: 24px;
+        cursor: pointer;
+        color: #fff;
+        margin-bottom: 10px;
+      }
+
+      #visionAllButton:hover {
+        color: #e0e0e0;
+      }
+
+      .canvaTitleVisionAll {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+
+        align-items: center;
+        width: 100%;
+      }
+
+      #canvaTitle {
+        font-size: 18px;
+        text-align: center;
+      }
+
+      #canvasContainerParent {
+        place-items: center; /* Center items both horizontally and vertically */
+        width: 95%;
+        max-width: 1024px;
+        height: 81.5vh;
+        border: 3px solid #0014dc;
+        border-radius: 10px;
+      }
+
+      #canvasContainer {
+        width: 90%;
+        max-width: 1024px;
+        height: 65vh;
+        overflow: hidden;
+        position: relative;
+        cursor: crosshair;
+        border: 3px solid #e0e0e0;
+        border-radius: 10px;
+      }
+
+      #globalDescription {
+        width: 95%;
+        margin-top: 10px;
+        margin-bottom: 10px;
+        border: 3px solid #0014dc;
+        border-radius: 10px;
+        font-size: 16px;
+        color: #e0e0e0;
+      }
+
+      canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      button {
+        background-color: #0014dc;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        margin: 5px;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background-color: #0012dcb4;
+      }
+
+      #downloadButton {
+        margin-top: 25px;
+      }
+
+      .select {
+        width: 100%;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        background-color: transparent;
+        color: #e0e0e0;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      select:focus {
+        outline: none;
+        border-color: #007bff;
+      }
+
+      select option {
+        padding: 10px;
+        color: #121212;
+      }
+
+      .dropdown-container label {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 14px;
+      }
+
+      .dropdown-container select {
+        border-radius: 5px;
+        border: 2px solid #0014dc;
+        padding: 7px 15px 7px 15px;
+        background-color: transparent;
+        color: #e0e0e0;
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgb(0, 0, 0);
+        background-color: rgba(0, 0, 0, 0.4);
+      }
+
+      .modal-content {
+        background-color: #121212;
+        margin: 10% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 50%;
+      }
+
+      .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+      }
+
+      .close:hover,
+      .close:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      .switch-container {
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0px 10px 0px 10px;
+        background-color: #0014dc;
+        border-radius: 5px;
+        width: 120px;
+        height: 35px;
+      }
+
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 20px;
+      }
+
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: white;
+        transition: 0.4s;
+        border-radius: 34px;
+      }
+
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 2px;
+        bottom: 2px;
+        background-color: #0014dc;
+        transition: 0.4s;
+        border-radius: 50%;
+      }
+
+      input:checked + .slider:before {
+        transform: translateX(20px);
+      }
+
+      #switchLabel {
+        color: #fff;
+        margin-top: 2px;
+        font-size: 13px;
+        font-family: Arial, sans-serif;
+      }
+
+      #ccad {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      #clearModalButton {
+        background-color: #dc3545;
+      }
+      #cancelClearButton {
+        background-color: #6c757d;
+      }
+
+      .modal-btn:hover {
+        opacity: 0.8;
+      }
+
+      .input-container {
+        overflow-y: scroll;
+        scrollbar-width: none;
+      }
+
+      #inputTitleContainer {
+        width: 40vh;
+        height: 79vh;
+        padding: 10px;
+        margin: 0px 20px 0px 20px;
+        border: 3px solid #0014dc;
+        border-radius: 10px;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .inputdiv {
+        display: flex;
+        flex-direction: row-reverse;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .inputspan {
+        font-size: 24px;
+        font-weight: bold;
+        width: 4%;
+        text-align: center;
+        padding-bottom: 5px;
+      }
+
+      .inputbutton {
+        background-color: transparent;
+        color: whitesmoke;
+        border: none;
+        padding: 0px;
+        margin: 0px 5px 3px 3px;
+        border-radius: 0px;
+        cursor: pointer;
+        font-size: 24px;
+      }
+
+      .inputbutton:hover {
+        scale: 1.1;
+        background-color: transparent;
+      }
+
+      input[type="text"] {
+        padding: 10px 0px 10px 10px;
+        background-color: transparent;
+        color: #e0e0e0;
+        margin-bottom: 5px;
+        width: 97%;
+        box-sizing: content-box;
+        overflow-y: scroll;
+        border-radius: 5px;
+        border: 1px solid #0014dc;
+      }
+
+      input[type="text"]:focus {
+        outline: none !important;
+        border-color: fuchsia !important;
+      }
+
+      .inputdiv input:focus + .inputspan {
+        color: fuchsia !important;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Buttons and Controls -->
+    <div class="button-container">
+      <button id="selectFolderButton" style="font-size: x-large">
+        Select Folder
+      </button>
+      <button id="prevButton" class="btn hidden">Previous</button>
+      <button id="nextButton" class="btn hidden">Next</button>
+      <button id="resetViewButton" class="btn hidden">Reset View</button>
+      <button id="clearButton" class="btn hidden">Clear</button>
+      <button id="undoButton" class="btn hidden">Undo</button>
+      <!-- Switch Box/Point Mode -->
+      <div class="switch-container" id="switch-container">
+        <label class="switch">
+          <input type="checkbox" id="toggleModeButton" />
+          <span class="slider"></span>
+        </label>
+        <span id="switchLabel">Point Mode</span>
+      </div>
+      <button id="loadAnnotationsButton" class="btn hidden">
+        Load Annotations
+      </button>
+      <button id="helpButton" class="btn hidden">?</button>
+    </div>
+    <!-- Privacy Note -->
+    <p id="privacy" class="privacy-note" style="text-align: center">
+      <strong>Privacy note:</strong> The app runs in your browser and no data is
+      ever sent. <br />
+      You can always disable your internet connection or check the
+      <a
+        href="https://dev.azure.com/slb-swt/AI_Lab/_git/technobrick_borehole_annotation_tool?path=/single_file_annotation_tool/single_file_annotation_tool.html&version=GBmaster"
+        >source code</a
+      >
+      if in doubt.
+      <br />
+      <br />
+      This app is powered by the
+      <strong>SLB Embedded AI Lab SRPC</strong>.
+    </p>
+    <!-- Canvas Containers & Annotation Description -->
+    <div id="ccad">
+      <!-- Canvas Containers & Global Desc-->
+      <div id="canvasContainerParent" class="hidden">
+        <h3 id="canvaTitle" class="hidden">Annotation Description</h3>
+        <!-- Canvas Containers -->
+        <div id="canvasContainer" class="canvas-container hidden">
+          <canvas id="imageCanvas"></canvas>
+          <canvas id="maskCanvas"></canvas>
+          <canvas id="annCanvas"></canvas>
+          <canvas id="tmpCanvas"></canvas>
+          <canvas id="crosshairCanvas"></canvas>
+        </div>
+        <input
+          type="text"
+          id="globalDescription"
+          placeholder="Global Description"
+        />
+      </div>
+      <!-- Annotation Description Input -->
+      <div id="inputTitleContainer" class="hidden">
+        <div class="canvaTitleVisionAll">
+          <span id="visionAllButton">👁</span>
+        </div>
+        <div class="input-container hidden" id="annotationInputContainer">
+          <input
+            type="text"
+            id="annotationDescription"
+            placeholder="Annotation Description"
+          />
+        </div>
+      </div>
+    </div>
+    <!-- Dropdowns -->
+    <div class="button-container">
+      <!-- Image Quality Dropdown -->
+      <div id="imageQualityDropdownContainer" class="dropdown-container hidden">
+        <label for="imageQualityDropdown">Image quality:</label>
+        <select id="imageQualityDropdown">
+          <option selected value="">-- select an option --</option>
+          <option value="bad">Bad</option>
+          <option value="medium">Medium</option>
+          <option value="good">Good</option>
+        </select>
+      </div>
+      <!-- Readability Dropdown -->
+      <div id="readabilityDropdownContainer" class="dropdown-container hidden">
+        <label for="readabilityDropdown">Text readability:</label>
+        <select id="readabilityDropdown">
+          <option selected value="">-- select an option --</option>
+          <option value="Readable">Readable</option>
+          <option value="incomplete">Partially hidden</option>
+          <option value="un-readable">Un-readable</option>
+        </select>
+      </div>
+      <!-- Export Button -->
+      <button id="downloadButton" class="btn hidden">Save Annotations</button>
+    </div>
+    <!-- Mask Opacity Slider : Dead code but keep here for potential uses in the future -->
+    <div class="slider-container hidden" id="sliderContainer">
+      <label for="alphaSlider">Mask Opacity:</label>
+      <input type="range" id="alphaSlider" min="0" max="100" value="30" />
+    </div>
+    <!-- Help Modal -->
+    <div id="helpModal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>How to Use This App</h2>
+        <section>
+          <h3>Visualization</h3>
+          <ul>
+            <li><strong>Pan:</strong> Drag with left click.</li>
+            <li><strong>Zoom:</strong> Scroll mouse wheel.</li>
+            <li><strong>Reset View:</strong> Click the "Reset View" button.</li>
+            <li><strong>Next Image:</strong> Click `Next` or `RightArrow`.</li>
+            <li>
+              <strong>Previous Image:</strong> Click `Previous` or `LeftArrow`.
+            </li>
+            <!-- <li>
+              <strong>Overlay Mask:</strong> Save your image as `imgname.jpg`
+              with the mask as `imgname_mask.png`.
+            </li> -->
+          </ul>
+        </section>
+        <section>
+          <h3>Annotation</h3>
+          <ul>
+            <li>
+              <strong>Switch Mode:</strong> Switch between point annotation and
+              bounding box annotation modes.
+            </li>
+            <li>
+              <strong>Box Annotation:</strong> Use two left clicks per bounding
+              box.
+            </li>
+            <li>
+              <strong>Point Annotation:</strong> Use left (positive) and right
+              (negative) clicks.
+            </li>
+            <li>
+              <strong>Text Annotation:</strong> Each annotation will have it's
+              own text box to describe the annotation, the color of the text box
+              will be the same as the annotation.
+            </li>
+            <li>
+              <strong>Delete Annotation:</strong> Click `Undo` or `CTRL+Z` to
+              remove the last annotation or `Clear` to remove all annotations on
+              the current image.
+            </li>
+            <li>
+              <strong>Save/Load:</strong> Save your annotations to a file or
+              load previous annotations using `Save` and `Load`.
+            </li>
+          </ul>
+        </section>
+        <section>
+          <h3>Feedback</h3>
+          <p>
+            For feedback, visit the
+            <a
+              href="https://dev.azure.com/slb-swt/AI_Lab/_git/technobrick_borehole_annotation_tool?path=%2Fsingle_file_annotation_tool&version=GBmaster&_a=contents"
+              >repository</a
+            >
+            or contact
+            <a href="mailto:fmarchesoni@gmail.com">Franco Marchesoni</a> or
+            <a href="mailto:fhuang5@gmail.com">Frederic Huang</a> or
+            <a href="mailto:abarneche@gmail.com">Anne-Maelle Barneche</a>.
+          </p>
+        </section>
+      </div>
+    </div>
+    <!-- Clear Confirmation Modal -->
+    <div id="clearModal" class="modal hidden">
+      <div
+        class="modal-content"
+        style="min-height: 150px; width: 30%; margin: 14% auto"
+      >
+        <span id="cancelClearSpan" class="close">&times;</span>
+        <h2 id="clearModalH2">Clear</h2>
+        <span
+          >Are you sure to clear all the annotations made for this image ?<br /><br
+        /></span>
+        <div style="display: flex; justify-content: space-around">
+          <button id="clearModalButton" class="modal-btn">Clear</button>
+          <button id="cancelClearButton" class="modal-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+    <!-- Hidden Inputs -->
+    <input
+      type="file"
+      id="folderInput"
+      class="hidden"
+      webkitdirectory
+      directory
+      multiple
+    />
+
+    <input type="file" id="loadFileInput" class="hidden" accept=".json" />
+    <script>
+      let imageFiles = [];
+      let currentIndex = 0;
+      let annotations = {};
+      let imageCanvas = document.getElementById("imageCanvas");
+      let crosshairCanvas = document.getElementById("crosshairCanvas");
+      let annCanvas = document.getElementById("annCanvas");
+      let maskCanvas = document.getElementById("maskCanvas");
+
+      let tmpCanvas = document.getElementById("tmpCanvas");
+      let imageCtx = imageCanvas.getContext("2d");
+      let crosshairCtx = crosshairCanvas.getContext("2d");
+      let annCtx = annCanvas.getContext("2d");
+      let maskCtx = maskCanvas.getContext("2d");
+      maskCtx.globalAlpha = 0.3; // Default mask transparency
+      let tmpCtx = tmpCanvas.getContext("2d");
+      let currentImage = null;
+      let maskImage = null;
+      let margin = 20; // Margin around the image
+      let dragging = false;
+      let lastX = 0;
+      let lastY = 0;
+      let translateX = 0;
+      let translateY = 0;
+      let scale = 1;
+      const rs = 5; // radius of the square representing the point
+      let annotationMode = "point"; // or 'bbox'
+      let bboxStart = null;
+      let drawingBbox = false;
+      let navigationActive = true;
+      let currentFile = null;
+
+      const distinctCssColors = [
+        // 30 distinct colors for the annotations
+        "#b4f0e9",
+        "#b917cf",
+        "#f0b4d1",
+        "#17aacf",
+        "#e4f0b4",
+        "#cf1757",
+        "#b4d7f0",
+        "#f0b4be",
+        "#599e8d",
+        "#a7cf17",
+        "#9a17cf",
+        "#17cfa1",
+        "#b4c1f0",
+        "#f0c9b4",
+        "#82cf17",
+        "#cf172c",
+        "#b4f0d4",
+        "#cfb4f0",
+        "#17cfc8",
+        "#e5b4f0",
+        "#78ad6d",
+        "#172ccf",
+        "#1776cf",
+        "#f0d9b4",
+        "#c6f0b4",
+        "#bbb4f0",
+        "#cf5a17",
+        "#6917cf",
+        "#cf9117",
+        "#bfcf17",
+      ];
+
+      // Folder Button Trigger
+      document
+        .getElementById("selectFolderButton")
+        .addEventListener("click", function () {
+          document.getElementById("folderInput").click();
+        });
+      // Navigation with arrow keys
+      document.addEventListener("keydown", function (event) {
+        if (navigationActive && event.key === "ArrowLeft") {
+          document.getElementById("prevButton").click();
+        } else if (navigationActive && event.key === "ArrowRight") {
+          document.getElementById("nextButton").click();
+        }
+      });
+      document
+        .getElementById("nextButton")
+        .addEventListener("click", function () {
+          if (currentIndex < imageFiles.length - 1) {
+            currentIndex++;
+            loadSample();
+          }
+        });
+      document
+        .getElementById("prevButton")
+        .addEventListener("click", function () {
+          if (currentIndex > 0) {
+            currentIndex--;
+            loadSample();
+          }
+        });
+
+      // Process uploaded folder
+      document
+        .getElementById("folderInput")
+        .addEventListener("change", function (event) {
+          const files = event.target.files;
+          imageFiles = [];
+          annotations = {};
+
+          for (const file of files) {
+            if (file.type.startsWith("image/")) {
+              imageFiles.push(file);
+            }
+          }
+
+          if (imageFiles.length > 0) {
+            document.getElementById("selectFolderButton").style.display =
+              "none";
+            document.getElementById("privacy").style.display = "none";
+
+            // Remove 'hidden' class from all elements
+            document
+              .querySelectorAll(".btn, .dropdown-container")
+              .forEach((element) => {
+                element.classList.remove("hidden");
+              });
+            document
+              .getElementById("canvasContainerParent")
+              .classList.remove("hidden");
+            document.getElementById("canvasContainerParent").style.display =
+              "grid";
+            document
+              .getElementById("canvasContainer")
+              .classList.remove("hidden");
+            document
+              .getElementById("annotationInputContainer")
+              .classList.remove("hidden");
+            document
+              .getElementById("sliderContainer")
+              .classList.remove("hidden");
+            document.getElementById("switch-container").style.display = "flex";
+            document.getElementById("canvaTitle").classList.remove("hidden");
+            document
+              .getElementById("inputTitleContainer")
+              .classList.remove("hidden");
+            document.getElementById("inputTitleContainer").style.display =
+              "flex";
+
+            loadSample();
+          } else {
+            alert("No images found in the folder.");
+          }
+        });
+
+      // Modal
+      var modal = document.getElementById("helpModal");
+      var btn = document.getElementById("helpButton");
+      var span = document.getElementsByClassName("close")[0];
+
+      btn.onclick = function () {
+        // open the modal when clicking on the ?
+        modal.style.display = "block";
+      };
+      span.onclick = function () {
+        // close the modal when clicking on the x
+        modal.style.display = "none";
+      };
+
+      var clearModal = document.getElementById("clearModal");
+      var clearModalButton = document.getElementById("clearModalButton");
+      var cancelClearButton = document.getElementById("cancelClearButton");
+      var cancelClearSpan = document.getElementById("cancelClearSpan");
+      var h2ClearModal = document.getElementById("clearModalH2");
+
+      clearButton.onclick = function () {
+        h2ClearModal.textContent = `Clear "${currentFile}"`;
+        clearModal.style.display = "block";
+      };
+      cancelClearButton.onclick = function () {
+        clearModal.style.display = "none";
+      };
+      cancelClearSpan.onclick = function () {
+        clearModal.style.display = "none";
+      };
+      clearModalButton.onclick = function () {
+        annotations[currentFile] = annotations[currentFile].splice(0, 3);
+        renderAll();
+        clearModal.style.display = "none";
+      };
+
+      window.onclick = function (event) {
+        // close the modal when clicking outside of it
+        if (event.target == modal) {
+          modal.style.display = "none";
+        }
+        if (event.target == clearModal) {
+          clearModal.style.display = "none";
+        }
+      };
+
+      var visionAllButton = document.getElementById("visionAllButton");
+      visionAllButton.onclick = function () {
+        if (visionAllButton.style.color == "rgb(119, 119, 119)") {
+          for (let i = 0; i < annotations[currentFile].length; i++) {
+            annotations[currentFile][i].visible = true;
+          }
+          renderAll();
+          visionAllButton.style.color = "#fff";
+        } else {
+          for (let i = 0; i < annotations[currentFile].length; i++) {
+            annotations[currentFile][i].visible = false;
+          }
+          renderAll();
+          visionAllButton.style.color = "#777";
+        }
+      };
+
+      // Import Annotations Button
+      document
+        .getElementById("loadAnnotationsButton")
+        .addEventListener("click", function () {
+          document.getElementById("loadFileInput").click();
+        });
+
+      // Process the Imported Annotations
+      document
+        .getElementById("loadFileInput")
+        .addEventListener("change", function (event) {
+          const file = event.target.files[0];
+          if (file && file.type === "application/json") {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+              try {
+                const loadedAnnotations = JSON.parse(e.target.result);
+                if (typeof loadedAnnotations === "object") {
+                  annotations = loadedAnnotations;
+                  renderAll();
+                  alert("Annotations loaded successfully.");
+                } else {
+                  throw new Error("Format is not correct");
+                }
+              } catch (err) {
+                alert("Failed to load annotations: " + err.message);
+              }
+            };
+            reader.readAsText(file);
+          } else {
+            alert("Please select a valid JSON file.");
+          }
+          this.value = ""; // Reset the input after the file is loaded
+        });
+
+      // Toggle Annotation Mode
+      document
+        .getElementById("toggleModeButton")
+        .addEventListener("change", function () {
+          console.log("Switching annotation mode");
+          const label = document.getElementById("switchLabel");
+          if (this.checked) {
+            annotationMode = "bbox";
+            label.textContent = "Box Mode";
+          } else {
+            annotationMode = "point";
+            label.textContent = "Point Mode";
+          }
+        });
+
+      // Tools
+      document
+        .getElementById("resetViewButton")
+        .addEventListener("click", function () {
+          resetViewParams();
+          renderAll();
+        });
+
+      document.addEventListener("keydown", function (event) {
+        if (event.ctrlKey && event.key === "z") {
+          undoLastAnnotation();
+        } else if (event.ctrlKey && event.key === "w") {
+          undoLastAnnotation();
+        } else if (event.ctrlKey && event.key === "/") {
+          console.log(annotations[currentFile]);
+        }
+      });
+      document
+        .getElementById("undoButton")
+        .addEventListener("click", function () {
+          undoLastAnnotation();
+        });
+      function undoLastAnnotation() {
+        if (annotations[currentFile] && annotations[currentFile].length > 3) {
+          annotations[currentFile].pop();
+          renderAll();
+        } else {
+          console.log("No annotations to undo.");
+        }
+      }
+
+      document
+        .getElementById("downloadButton")
+        .addEventListener("click", function () {
+          downloadAnnotations();
+        });
+
+      // Dropdowns
+      document
+        .getElementById("readabilityDropdown")
+        .addEventListener("change", function () {
+          const selectedValue = this.value;
+          annotations[currentFile].forEach((ann_) => {
+            if (ann_.type == "readability") {
+              ann_.value = selectedValue;
+              flag_never_annotated = false;
+            }
+          });
+          renderAll(); // update the canvas with new annotation
+        });
+      document
+        .getElementById("imageQualityDropdown")
+        .addEventListener("change", function () {
+          const selectedValue = this.value;
+          annotations[currentFile].forEach((ann_) => {
+            if (ann_.type == "imageQuality") {
+              ann_.value = selectedValue;
+            }
+          });
+          renderAll(); // update the canvas with new annotation
+        });
+      document
+        .getElementById("globalDescription")
+        .addEventListener("input", function () {
+          annotations[currentFile].forEach((ann_) => {
+            if (ann_.type == "desc") {
+              ann_.globalDescription = this.value;
+            }
+          });
+          renderAll(); // update the canvas with new annotation
+        });
+
+      // Download Annotations
+      function downloadAnnotations() {
+        let Dannotations = annotations;
+
+        for (File in Dannotations) {
+          let description = "";
+          for (annotation in Dannotations[File]) {
+            let ann = Dannotations[File][annotation];
+            if ("color" in ann) {
+              delete ann.color;
+            }
+            if ("visible" in ann) {
+              delete ann.visible;
+            }
+            if (
+              ann.type == "bbox" ||
+              ann.type == "positive" ||
+              ann.type == "negative"
+            ) {
+              description += ann.description;
+              description += "\n";
+            }
+          }
+          console.log("DESCRIPTION : ", description);
+          Dannotations[File][2].description = description;
+        }
+
+        // Convert the annotations object to a JSON string
+        let dataStr =
+          "data:text/json;charset=utf-8," +
+          encodeURIComponent(JSON.stringify(Dannotations));
+        let downloadAnchorNode = document.createElement("a");
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "annotations.json");
+        document.body.appendChild(downloadAnchorNode); // Required for Firefox
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+      }
+
+      // Function to update mask transparency : Dead code but keep here for potential uses in the future
+      function updateMaskOpacity(value) {
+        renderAll();
+      }
+      // Debounce function to limit excessive updates
+      function debounce(fn, delay) {
+        let timeout;
+        return function (...args) {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => fn(...args), delay);
+        };
+      }
+
+      // Event listener for the slider with a debounced update
+      const alphaSlider = document.getElementById("alphaSlider");
+      const debouncedUpdate = debounce(updateMaskOpacity, 100);
+      alphaSlider.addEventListener("input", function () {
+        debouncedUpdate(this.value);
+      });
+
+      // mouse move
+      crosshairCanvas.addEventListener("mousemove", function (event) {
+        // Draw the crosshair when not on the borders
+        drawCrosshair(event.offsetX, event.offsetY);
+
+        clicking = false; // mouse moved, not a click
+        if (drawingBbox) {
+          tmpCtx.clearRect(0, 0, tmpCanvas.width, tmpCanvas.height);
+          tmpCtx.strokeStyle = "violet";
+          tmpCtx.lineWidth = 4;
+          let x1 = Math.min(event.offsetX, bboxStart.x * scale + translateX);
+          let y1 = Math.min(event.offsetY, bboxStart.y * scale + translateY);
+          let x2 = Math.max(event.offsetX, bboxStart.x * scale + translateX);
+          let y2 = Math.max(event.offsetY, bboxStart.y * scale + translateY);
+          tmpCtx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        }
+        if (dragging) {
+          let dx = event.offsetX - lastX;
+          let dy = event.offsetY - lastY;
+          translateX += dx;
+          translateY += dy;
+          lastX = event.offsetX;
+          lastY = event.offsetY;
+          renderAll();
+        }
+      });
+
+      window.addEventListener("contextmenu", function (event) {
+        console.log("contextmenu window");
+        event.preventDefault();
+      });
+
+      crosshairCanvas.addEventListener("mousedown", function (event) {
+        clicking = true;
+        if (event.button === 0) {
+          // Check if left mouse button is pressed
+          dragging = true;
+          lastX = event.offsetX;
+          lastY = event.offsetY;
+        }
+      });
+
+      crosshairCanvas.addEventListener("mouseup", function (event) {
+        if (clicking) {
+          if (event.button === 0) {
+            // Ensure the left mouse button was released
+            if (annotationMode === "point") {
+              addPoint(
+                (event.offsetX - translateX) / scale,
+                (event.offsetY - translateY) / scale,
+                "positive"
+              );
+            } else if (annotationMode === "bbox") {
+              if (!bboxStart) {
+                // First click sets the start of the bounding box
+                bboxStart = {
+                  x: (event.offsetX - translateX) / scale,
+                  y: (event.offsetY - translateY) / scale,
+                };
+                drawingBbox = true;
+              } else {
+                // Second click sets the end of the bounding box and creates it
+                addBoundingBox(bboxStart, {
+                  x: (event.offsetX - translateX) / scale,
+                  y: (event.offsetY - translateY) / scale,
+                });
+                bboxStart = null; // Reset for next bounding box
+                drawingBbox = false;
+              }
+            }
+          }
+          if (event.button === 1) {
+            let index = getAnnotationIndex(event.offsetX, event.offsetY);
+            if (index !== 0) {
+              // Put the annotation description in focus
+              let annotationInputContainer = document.getElementById(
+                "annotation_" + (index - 1)
+              );
+              console.log("annotation_" + index);
+              console.log(annotationInputContainer);
+              annotationInputContainer.focus();
+              renderAll(index);
+            } else {
+              renderAll();
+            }
+          }
+          if (event.button === 2) {
+            // Ensure the right mouse button was released
+            if (annotationMode === "point") {
+              addPoint(
+                (event.offsetX - translateX) / scale,
+                (event.offsetY - translateY) / scale,
+                "negative"
+              );
+            } else if (annotationMode === "bbox") {
+              // Right click does nothing in bbox mode
+              bboxStart = null;
+              drawingBbox = false;
+              tmpCtx.clearRect(0, 0, tmpCanvas.width, tmpCanvas.height);
+            }
+          }
+          clicking = false;
+        }
+      });
+
+      function getAnnotationIndex(x, y) {
+        const borderTolerance = 10;
+        for (let i = 0; i < annotations[currentFile].length; i++) {
+          let ann = annotations[currentFile][i];
+
+          if (ann.type === "bbox") {
+            // Calculate the bounding box coordinates
+            let x1 = ann.x1 * scale + translateX;
+            let y1 = ann.y1 * scale + translateY;
+            let x2 = ann.x2 * scale + translateX;
+            let y2 = ann.y2 * scale + translateY;
+
+            let onLeftBorder =
+              x >= x1 - borderTolerance &&
+              x <= x1 + borderTolerance &&
+              y >= y1 - borderTolerance &&
+              y <= y2 + borderTolerance;
+            let onRightBorder =
+              x >= x2 - borderTolerance &&
+              x <= x2 + borderTolerance &&
+              y >= y1 - borderTolerance &&
+              y <= y2 + borderTolerance;
+            let onTopBorder =
+              x >= x1 - borderTolerance &&
+              x <= x2 + borderTolerance &&
+              y >= y1 - borderTolerance &&
+              y <= y1 + borderTolerance;
+            let onBottomBorder =
+              x >= x1 - borderTolerance &&
+              x <= x2 + borderTolerance &&
+              y >= y2 - borderTolerance &&
+              y <= y2 + borderTolerance;
+
+            if (
+              onLeftBorder ||
+              onRightBorder ||
+              onTopBorder ||
+              onBottomBorder
+            ) {
+              return i;
+            }
+          } else if (ann.type === "positive" || ann.type === "negative") {
+            // Calculate the point coordinates
+            let pointX = ann.imgX * scale + translateX;
+            let pointY = ann.imgY * scale + translateY;
+            const pointRadius = rs + borderTolerance; // Increase detection radius for points
+
+            // Check if the click is near the point
+            if (
+              x >= pointX - pointRadius &&
+              x <= pointX + pointRadius &&
+              y >= pointY - pointRadius &&
+              y <= pointY + pointRadius
+            ) {
+              return i;
+            }
+          }
+        }
+        return 0;
+      }
+
+      window.addEventListener("mouseup", function (event) {
+        if (event.button === 0) {
+          // Ensure the left mouse button was released
+          dragging = false;
+        }
+      });
+
+      crosshairCanvas.addEventListener("wheel", function (event) {
+        event.preventDefault();
+        const zoomSpeed = 0.1;
+        let delta = -Math.sign(event.deltaY) * zoomSpeed;
+        let zoomFactor = Math.exp(delta);
+        scale *= zoomFactor;
+
+        // translation comes from the equality (tx - eo) / s1 = (tx2 - eo) / s2 which means that the relative position of eo wrt tx should be constant
+        translateX = (translateX - event.offsetX) * zoomFactor + event.offsetX;
+        translateY = (translateY - event.offsetY) * zoomFactor + event.offsetY;
+
+        renderAll();
+      });
+
+      // Draw canva
+      function addPoint(x, y, type) {
+        console.log("Adding point at", x, y, type);
+        annotations[currentFile].push({
+          imgX: x,
+          imgY: y,
+          description: "",
+          type: type,
+        });
+        renderAll();
+      }
+
+      function addBoundingBox(start, end) {
+        let bbox = {
+          x1: Math.min(start.x, end.x),
+          y1: Math.min(start.y, end.y),
+          x2: Math.max(start.x, end.x),
+          y2: Math.max(start.y, end.y),
+          description: "",
+          type: "bbox",
+        };
+        annotations[currentFile].push(bbox);
+        renderAll();
+      }
+
+      function renderAll(focusedIndex) {
+        tmpCtx.clearRect(0, 0, tmpCanvas.width, tmpCanvas.height);
+        annCtx.clearRect(0, 0, annCanvas.width, annCanvas.height);
+        drawImage();
+
+        if (maskImage) {
+          maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+          maskCtx.globalAlpha = alphaSlider.value / 100;
+          maskCtx.drawImage(
+            maskImage,
+            translateX,
+            translateY,
+            maskImage.width * scale,
+            maskImage.height * scale
+          );
+        }
+
+        if (!focusedIndex) {
+          // Clear the annotation input container
+          const annotationInputContainer = document.getElementById(
+            "annotationInputContainer"
+          );
+          annotationInputContainer.innerHTML = ""; // Clear any previous inputs
+        }
+        document.getElementById("canvaTitle").innerText = currentFile;
+        if (annotations[currentFile].length == 3) {
+          document.getElementById("visionAllButton").style.display = "none";
+        } else {
+          document.getElementById("visionAllButton").style.display = "flex";
+        }
+
+        // Loop through each annotation
+        annotations[currentFile].forEach((ann, index) => {
+          if (ann.visible === true) {
+            visionAllButton.style.color = "#fff";
+          }
+          if (
+            !focusedIndex &&
+            (ann.type == "bbox" ||
+              ann.type == "positive" ||
+              ann.type == "negative")
+          ) {
+            if (ann.visible === undefined) {
+              ann.visible = true;
+            }
+            // Create the div with class 'inputdiv'
+            let inputDiv = document.createElement("div");
+            inputDiv.classList.add("inputdiv");
+
+            // Create the span with the letter 'O'
+            let span = document.createElement("span");
+            span.classList.add("inputspan");
+
+            // Create the input field dynamically for descriptions
+            let input = document.createElement("input");
+            input.type = "text";
+            input.value = ann.description || "";
+            input.setAttribute(`id`, `annotation_${index - 1}`);
+            input.placeholder = `Description for annotation ${index - 1}`;
+
+            // Create the delete button
+            let button = document.createElement("button");
+            button.textContent = `🗑`;
+            button.classList.add("inputbutton");
+
+            // Create the delete button
+            let visionButton = document.createElement("visionButton");
+            visionButton.textContent = `👁`;
+            visionButton.classList.add("inputbutton");
+            if (ann.visible === true) {
+              visionButton.style.color = "#fff";
+            } else {
+              visionButton.style.color = "#777";
+            }
+
+            if (ann.type === "bbox") {
+              if (!ann.color) {
+                ann.color = distinctCssColors[index % distinctCssColors.length];
+              }
+              input.style.border = `2px solid ${
+                ann.visible ? ann.color : "#777"
+              }`;
+              span.textContent = "□";
+              span.style.color = ann.visible ? ann.color : "#777";
+            } else if (ann.type === "positive") {
+              input.style.border = `2px solid ${
+                ann.visible ? "green" : "#777"
+              }`;
+              span.textContent = "•";
+              span.style.color = ann.visible ? "green" : "#777";
+            } else if (ann.type === "negative") {
+              input.style.border = `2px solid ${ann.visible ? "red" : "#777"}`;
+              span.textContent = "•";
+              span.style.color = ann.visible ? "red" : "#777";
+            }
+            // Add an event listener to delete the annotation on button click
+            button.addEventListener("click", function () {
+              annotations[currentFile].splice(index, 1);
+              renderAll();
+            });
+            // Add an event listener to update the annotation description on input change
+            input.addEventListener("input", function () {
+              ann.description = this.value;
+            });
+            // Add an event listener to check if the annotation is visible
+            visionButton.addEventListener("click", function () {
+              ann.visible = !ann.visible;
+              renderAll();
+            });
+            // Add an event listener to render all annotations when the input is focused
+            input.addEventListener("focus", function () {
+              navigationActive = false;
+              renderAll(index);
+            });
+            // Add an event listener to render all annotations when the input is focused
+            input.addEventListener("focusout", function () {
+              navigationActive = true;
+              renderAll();
+            });
+
+            // Append the span and input to the div
+            inputDiv.appendChild(button);
+            inputDiv.appendChild(visionButton);
+            inputDiv.appendChild(input);
+            inputDiv.appendChild(span);
+
+            // Append the div to the annotation input container
+            annotationInputContainer.appendChild(inputDiv);
+          }
+
+          if (ann.type === "bbox" && ann.visible) {
+            annCtx.strokeStyle = focusedIndex === index ? "fuchsia" : ann.color;
+            annCtx.lineWidth = focusedIndex === index ? 6 : 4;
+            let x1 = ann.x1 * scale + translateX;
+            let y1 = ann.y1 * scale + translateY;
+            let x2 = ann.x2 * scale + translateX;
+            let y2 = ann.y2 * scale + translateY;
+            annCtx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+          }
+
+          if (ann.type == "readability") {
+            document.getElementById("readabilityDropdown").value = ann.value;
+          } else if (ann.type == "imageQuality") {
+            document.getElementById("imageQualityDropdown").value = ann.value;
+          } else if (ann.type == "desc") {
+            document.getElementById("globalDescription").value =
+              ann.globalDescription;
+          } else {
+            if (ann.type === "positive") {
+              annCtx.fillStyle = focusedIndex === index ? "fuchsia" : "green";
+            } else if (ann.type === "negative") {
+              annCtx.fillStyle = focusedIndex === index ? "fuchsia" : "red";
+            }
+            if (ann.visible) {
+              let x = ann.imgX * scale + translateX;
+              let y = ann.imgY * scale + translateY;
+              annCtx.fillRect(x - rs, y - rs, 2 * rs + 1, 2 * rs + 1);
+            }
+          }
+        });
+      }
+
+      function applyClamping() {
+        translateX = Math.max(
+          Math.min(imageCanvas.width - margin, translateX),
+          margin - currentImage.width * scale
+        );
+        translateY = Math.max(
+          Math.min(imageCanvas.height - margin, translateY),
+          margin - currentImage.height * scale
+        );
+      }
+
+      function drawImage() {
+        imageCtx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+        applyClamping();
+        imageCtx.drawImage(
+          currentImage,
+          translateX,
+          translateY,
+          currentImage.width * scale,
+          currentImage.height * scale
+        );
+      }
+
+      function drawCrosshair(x, y) {
+        // Clear the previous crosshair
+        crosshairCtx.clearRect(
+          0,
+          0,
+          crosshairCanvas.width,
+          crosshairCanvas.height
+        );
+
+        // Tolerance to handle near-border cases (allow 1px tolerance)
+        const tolerance = 5;
+
+        // Check if the mouse is near the borders, if so, stop drawing
+        if (
+          x <= tolerance ||
+          x >= crosshairCanvas.width - tolerance ||
+          y <= tolerance ||
+          y >= crosshairCanvas.height - tolerance
+        ) {
+          return; // Do nothing if near the borders
+        }
+
+        // If not near the borders, draw the crosshair
+        crosshairCtx.strokeStyle = "red";
+        crosshairCtx.beginPath();
+        crosshairCtx.moveTo(x, 0);
+        crosshairCtx.lineTo(x, crosshairCanvas.height);
+        crosshairCtx.moveTo(0, y);
+        crosshairCtx.lineTo(crosshairCanvas.width, y);
+        crosshairCtx.stroke();
+      }
+
+      function resetViewParams() {
+        let maxCanvasWidth = imageCanvas.width - 2 * margin;
+        let maxCanvasHeight = imageCanvas.height - 2 * margin;
+        scale = Math.min(
+          maxCanvasWidth / currentImage.width,
+          maxCanvasHeight / currentImage.height
+        );
+        translateX = (imageCanvas.width - currentImage.width * scale) / 2;
+        translateY = (imageCanvas.height - currentImage.height * scale) / 2;
+      }
+
+      function loadSample() {
+        if (currentIndex >= 0 && currentIndex < imageFiles.length) {
+          currentFile = imageFiles[currentIndex].name;
+          annotations[currentFile] = annotations[currentFile] || [
+            { type: "imageQuality", value: "" },
+            { type: "readability", value: "" },
+            { type: "desc", description: "", globalDescription: "" },
+          ];
+          const fileReader = new FileReader();
+          fileReader.onload = function (e) {
+            currentImage = new Image();
+            currentImage.onload = () => {
+              imageCanvas.width =
+                crosshairCanvas.width =
+                annCanvas.width =
+                tmpCanvas.width =
+                maskCanvas.width =
+                  canvasContainer.clientWidth;
+              imageCanvas.height =
+                crosshairCanvas.height =
+                annCanvas.height =
+                tmpCanvas.height =
+                maskCanvas.height =
+                  canvasContainer.clientHeight;
+
+              resetViewParams();
+              renderAll();
+            };
+            currentImage.src = e.target.result;
+          };
+          fileReader.readAsDataURL(imageFiles[currentIndex]);
+
+          let baseName = currentFile.replace(/\.[^/.]+$/, "");
+          let maskName = baseName + "_mask.png";
+          let maskFile = Array.from(imageFiles).find(
+            (file) => file.name === maskName
+          );
+          if (maskFile) {
+            const maskReader = new FileReader();
+            maskReader.onload = function (e) {
+              maskImage = new Image();
+              maskImage.onload = () => {
+                // check that the mask is the same size as the image
+                if (
+                  maskImage.width !== currentImage.width ||
+                  maskImage.height !== currentImage.height
+                ) {
+                  alert(
+                    "Mask image size does not match the image size. Mask will not be displayed."
+                  );
+                  maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+                  document
+                    .getElementById("sliderContainer")
+                    .classList.add("hidden"); // Hide slider if no mask available
+                  return;
+                }
+
+                // cleared before
+                // clamped view params before
+                document
+                  .getElementById("sliderContainer")
+                  .classList.remove("hidden"); // Show slider if mask available
+                renderAll();
+              };
+              maskImage.src = e.target.result;
+            };
+            maskReader.readAsDataURL(maskFile);
+          } else {
+            maskImage = null;
+            maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+            document.getElementById("sliderContainer").classList.add("hidden"); // Hide slider if no mask available
+          }
+        } else {
+          alert("Index out of bounds. This should not happen.");
+        }
+      }
+    </script>
+  </body>
+</html>

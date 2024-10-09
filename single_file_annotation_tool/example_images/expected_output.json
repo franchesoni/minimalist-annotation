@@ -1,0 +1,80 @@
+{
+  "AirportSign1.jpeg": [
+    { "type": "imageQuality", "value": "good" },
+    { "type": "readability", "value": "Readable" },
+    {
+      "type": "desc",
+      "description": "A\n2\nSAN FRANCISCO\nVA5634\nUK8968\nTOKYO-HND",
+      "globalDescription": "This is an Airport Sign"
+    },
+    {
+      "imgX": 1068.8072641518927,
+      "imgY": 377.0938736913444,
+      "description": "A",
+      "type": "positive"
+    },
+    {
+      "imgX": 1218.410723908554,
+      "imgY": 438.29528904634225,
+      "description": "2",
+      "type": "negative"
+    },
+    {
+      "x1": 443.53826710485106,
+      "y1": 748.5057738086211,
+      "x2": 953.6424235515296,
+      "y2": 814.7275216249637,
+      "description": "SAN FRANCISCO",
+      "type": "bbox"
+    },
+    {
+      "x1": 693.3450583724403,
+      "y1": 960.2842346470237,
+      "x2": 941.1848670316236,
+      "y2": 1033.7182520275223,
+      "description": "VA5634",
+      "type": "bbox"
+    },
+    {
+      "x1": 1272.2936061133366,
+      "y1": 946.5153563881802,
+      "x2": 1527.345684336676,
+      "y2": 1017.9823911602726,
+      "description": "UK8968",
+      "type": "bbox"
+    },
+    {
+      "x1": 510.8432972429891,
+      "y1": 249.62952603597907,
+      "x2": 845.910250339393,
+      "y2": 308.4444699305606,
+      "description": "TOKYO-HND",
+      "type": "bbox"
+    }
+  ],
+  "AirportSign2.jpg": [
+    { "type": "imageQuality", "value": "good" },
+    { "type": "readability", "value": "incomplete" },
+    {
+      "type": "desc",
+      "description": "DELAYED\nWASHINGTON",
+      "globalDescription": "This can also be found in an airport. "
+    },
+    {
+      "x1": 513.0434782608696,
+      "y1": 221.73913043478262,
+      "x2": 607.8260869565217,
+      "y2": 254.7826086956522,
+      "description": "DELAYED",
+      "type": "bbox"
+    },
+    {
+      "x1": 261.7391304347826,
+      "y1": 313.9130434782609,
+      "x2": 404.34782608695656,
+      "y2": 346.95652173913044,
+      "description": "WASHINGTON",
+      "type": "bbox"
+    }
+  ]
+}
