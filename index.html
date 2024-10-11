@@ -126,6 +126,49 @@
 </head>
 
 <body>
+  <div class="button-container">
+    <button id="selectFolderButton" style="font-size: x-large">
+      Select Folder
+    </button>
+    <button id="prevButton" class="hidden">Previous</button>
+    <button id="nextButton" class="hidden">Next</button>
+    <button id="resetViewButton" class="hidden">Reset View</button>
+    <button id="clearButton" class="hidden">Clear</button>
+    <button id="undoButton" class="hidden">Undo</button>
+    <button id="toggleModeButton" class="hidden">
+      Switch to Bounding Box Mode
+    </button>
+    <button id="downloadButton" class="hidden">Save Annotations</button>
+    <button id="loadAnnotationsButton" class="hidden">
+      Load Annotations
+    </button>
+    <button id="helpButton" class="hidden">?</button>
+  </div>
+  <p id="privacy" style="width: 50%; text-align: justify">
+    <strong>Privacy note:</strong> The app is running on your browser and no
+    data is ever sent. You can always disable your
+    internet connection or check the
+    <a
+      href="https://github.com/franchesoni/minimalist-annotation/blob/main/index.html"
+      >source code</a
+    >
+    if in doubt.
+  </p>
+  <div id="canvasContainer" class="hidden">
+    <canvas id="imageCanvas"></canvas>
+    <canvas id="maskCanvas"></canvas>
+    <canvas id="annCanvas"></canvas>
+    <canvas id="tmpCanvas"></canvas>
+    <canvas id="crosshairCanvas"></canvas>
+  </div>
+  <div class="input-container">
+    <input type="text" id="annotationDescription" class="hidden" />
+  </div>
+  <!-- Add the mask transparency slider -->
+  <div class="slider-container hidden" id="sliderContainer">
+    <label class="slider-label" for="alphaSlider">Mask Opacity:</label>
+    <input type="range" id="alphaSlider" min="0" max="100" value="30" />
+  </div>
   <!-- Help Modal -->
   <div id="helpModal" class="modal hidden">
     <div class="modal-content">
@@ -187,49 +230,6 @@
     </div>
   </div>
 
-  <div class="button-container">
-    <button id="selectFolderButton" style="font-size: x-large">
-      Select Folder
-    </button>
-    <button id="prevButton" class="hidden">Previous</button>
-    <button id="nextButton" class="hidden">Next</button>
-    <button id="resetViewButton" class="hidden">Reset View</button>
-    <button id="clearButton" class="hidden">Clear</button>
-    <button id="undoButton" class="hidden">Undo</button>
-    <button id="toggleModeButton" class="hidden">
-      Switch to Bounding Box Mode
-    </button>
-    <button id="downloadButton" class="hidden">Save Annotations</button>
-    <button id="loadAnnotationsButton" class="hidden">
-      Load Annotations
-    </button>
-    <button id="helpButton" class="hidden">?</button>
-  </div>
-  <p id="privacy" style="width: 50%; text-align: justify">
-    <strong>Privacy note:</strong> The app is running on your browser and no
-    data is ever sent. You can always disable your
-    internet connection or check the
-    <a
-      href="https://github.com/franchesoni/minimalist-annotation/blob/main/index.html"
-      >source code</a
-    >
-    if in doubt.
-  </p>
-  <div id="canvasContainer" class="hidden">
-    <canvas id="imageCanvas"></canvas>
-    <canvas id="maskCanvas"></canvas>
-    <canvas id="annCanvas"></canvas>
-    <canvas id="tmpCanvas"></canvas>
-    <canvas id="crosshairCanvas"></canvas>
-  </div>
-  <div class="input-container">
-    <input type="text" id="annotationDescription" class="hidden" />
-  </div>
-  <!-- Add the mask transparency slider -->
-  <div class="slider-container hidden" id="sliderContainer">
-    <label class="slider-label" for="alphaSlider">Mask Opacity:</label>
-    <input type="range" id="alphaSlider" min="0" max="100" value="30" />
-  </div>
 
   <input
     type="file"
@@ -272,12 +272,13 @@
     let navigationActive = true;
     let currentFile = null;
 
+    // Folder Button Trigger
     document
       .getElementById("selectFolderButton")
       .addEventListener("click", function () {
         document.getElementById("folderInput").click();
       });
-
+    // Navigation with arrow keys
     document.addEventListener("keydown", function (event) {
       if (
         navigationActive &&
