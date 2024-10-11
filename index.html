@@ -164,8 +164,10 @@
         <button id="loadAnnotationsButton" class="hidden">Load Annotations</button>
         <button id="helpButton" class="hidden">?</button>
     </div>
-    <p id="privacy" style="width: 50%;text-align: justify;"><strong>Privacy note:</strong> The app is running on your browser and no data is ever sent. Trust me. I don't care. You can always disable your internet connection or check the <a
-            href="https://github.com/franchesoni/minimalist-annotation/blob/main/index.html">source code</a> if in doubt.</p>
+    <p id="privacy" style="width: 50%;text-align: justify;"><strong>Privacy note:</strong> The app is running on your
+        browser and no data is ever sent. Trust me. I don't care. You can always disable your internet connection or
+        check the <a href="https://github.com/franchesoni/minimalist-annotation/blob/main/index.html">source code</a> if
+        in doubt.</p>
     <div id="canvasContainer" class="hidden">
         <canvas id="imageCanvas"></canvas>
         <canvas id="maskCanvas"></canvas>
@@ -229,6 +231,20 @@
                 document.getElementById('nextButton').click();
             }
         });
+        document.getElementById('nextButton').addEventListener('click', function () {
+            if (currentIndex < imageFiles.length - 1) {
+                currentIndex++;
+                loadSample();
+            }
+        });
+
+        document.getElementById('prevButton').addEventListener('click', function () {
+            if (currentIndex > 0) {
+                currentIndex--;
+                loadSample();
+            }
+        });
+
 
         document.getElementById('folderInput').addEventListener('change', function (event) {
             const files = event.target.files;
@@ -327,19 +343,6 @@
             }
         });
 
-        document.getElementById('nextButton').addEventListener('click', function () {
-            if (currentIndex < imageFiles.length - 1) {
-                currentIndex++;
-                loadSample();
-            }
-        });
-
-        document.getElementById('prevButton').addEventListener('click', function () {
-            if (currentIndex > 0) {
-                currentIndex--;
-                loadSample();
-            }
-        });
 
         document.getElementById('resetViewButton').addEventListener('click', function () {
             resetViewParams();
