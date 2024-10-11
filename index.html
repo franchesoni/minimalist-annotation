@@ -207,7 +207,7 @@
   </div>
   <p id="privacy" style="width: 50%; text-align: justify">
     <strong>Privacy note:</strong> The app is running on your browser and no
-    data is ever sent. Trust me. I don't care. You can always disable your
+    data is ever sent. You can always disable your
     internet connection or check the
     <a
       href="https://github.com/franchesoni/minimalist-annotation/blob/main/index.html"
@@ -493,7 +493,6 @@
     function updateMaskOpacity(value) {
       renderAll();
     }
-
     // Debounce function to limit excessive updates
     function debounce(fn, delay) {
       let timeout;
@@ -512,7 +511,9 @@
 
     // mouse move
     crosshairCanvas.addEventListener("mousemove", function (event) {
+      // Draw the crosshair when not on the borders
       drawCrosshair(event.offsetX, event.offsetY);
+
       clicking = false; // mouse moved, not a click
       if (drawingBbox) {
         tmpCtx.clearRect(0, 0, tmpCanvas.width, tmpCanvas.height);
