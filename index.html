@@ -435,12 +435,25 @@
         renderAll();
       });
 
+    document.addEventListener("keydown", function (event) {
+      if (event.ctrlKey && event.key === "z") {
+        undoLastAnnotation();
+      } else if (event.ctrlKey && event.key === "/") {
+        console.log(annotations[currentFile]);
+      }
+    });
     document
       .getElementById("undoButton")
       .addEventListener("click", function () {
+        undoLastAnnotation();
+      });
+
+    function undoLastAnnotation() {
+      if (annotations[currentFile] && annotations[currentFile].length > 0) {
         annotations[currentFile].pop();
         renderAll();
-      });
+      }
+    }
 
     document
       .getElementById("downloadButton")
