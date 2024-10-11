@@ -579,79 +579,121 @@
             imageCtx.drawImage(currentImage, translateX, translateY, currentImage.width * scale, currentImage.height * scale);
         }
 
-        function drawCrosshair(x, y) {
-            crosshairCtx.clearRect(0, 0, crosshairCanvas.width, crosshairCanvas.height);
-            crosshairCtx.strokeStyle = 'red';
-            crosshairCtx.beginPath();
-            crosshairCtx.moveTo(x, 0);
-            crosshairCtx.lineTo(x, crosshairCanvas.height);
-            crosshairCtx.moveTo(0, y);
-            crosshairCtx.lineTo(crosshairCanvas.width, y);
-            crosshairCtx.stroke();
+      function drawCrosshair(x, y) {
+        // Clear the previous crosshair
+        crosshairCtx.clearRect(
+          0,
+          0,
+          crosshairCanvas.width,
+          crosshairCanvas.height
+        );
+
+        // Tolerance to handle near-border cases (allow 1px tolerance)
+        const tolerance = 5;
+
+        // Check if the mouse is near the borders, if so, stop drawing
+        if (
+          x <= tolerance ||
+          x >= crosshairCanvas.width - tolerance ||
+          y <= tolerance ||
+          y >= crosshairCanvas.height - tolerance
+        ) {
+          return; // Do nothing if near the borders
         }
 
-        function resetViewParams() {
-            let maxCanvasWidth = imageCanvas.width - 2 * margin;
-            let maxCanvasHeight = imageCanvas.height - 2 * margin;
-            scale = Math.min(maxCanvasWidth / currentImage.width, maxCanvasHeight / currentImage.height);
-            translateX = (imageCanvas.width - currentImage.width * scale) / 2;
-            translateY = (imageCanvas.height - currentImage.height * scale) / 2;
-        }
+        // If not near the borders, draw the crosshair
+        crosshairCtx.strokeStyle = "red";
+        crosshairCtx.beginPath();
+        crosshairCtx.moveTo(x, 0);
+        crosshairCtx.lineTo(x, crosshairCanvas.height);
+        crosshairCtx.moveTo(0, y);
+        crosshairCtx.lineTo(crosshairCanvas.width, y);
+        crosshairCtx.stroke();
+      }
 
-        function loadSample() {
-            if (currentIndex >= 0 && currentIndex < imageFiles.length) {
-                currentFile = imageFiles[currentIndex].name;
-                annotations[currentFile] = annotations[currentFile] || [];
-                const fileReader = new FileReader();
-                fileReader.onload = function (e) {
-                    currentImage = new Image();
-                    currentImage.onload = () => {
-                        imageCanvas.width = crosshairCanvas.width = annCanvas.width = tmpCanvas.width = maskCanvas.width = canvasContainer.clientWidth;
-                        imageCanvas.height = crosshairCanvas.height = annCanvas.height = tmpCanvas.height = maskCanvas.height = canvasContainer.clientHeight;
+      function resetViewParams() {
+        let maxCanvasWidth = imageCanvas.width - 2 * margin;
+        let maxCanvasHeight = imageCanvas.height - 2 * margin;
+        scale = Math.min(
+          maxCanvasWidth / currentImage.width,
+          maxCanvasHeight / currentImage.height
+        );
+        translateX = (imageCanvas.width - currentImage.width * scale) / 2;
+        translateY = (imageCanvas.height - currentImage.height * scale) / 2;
+      }
 
-                        // Reset zoom and translation
-                        resetViewParams()
-                        renderAll();
-                    };
-                    currentImage.src = e.target.result;
-                };
-                fileReader.readAsDataURL(imageFiles[currentIndex]);
+      function loadSample() {
+        if (currentIndex >= 0 && currentIndex < imageFiles.length) {
+          currentFile = imageFiles[currentIndex].name;
+          annotations[currentFile] = annotations[currentFile] || [];
+          const fileReader = new FileReader();
+          fileReader.onload = function (e) {
+            currentImage = new Image();
+            currentImage.onload = () => {
+              imageCanvas.width =
+                crosshairCanvas.width =
+                annCanvas.width =
+                tmpCanvas.width =
+                maskCanvas.width =
+                  canvasContainer.clientWidth;
+              imageCanvas.height =
+                crosshairCanvas.height =
+                annCanvas.height =
+                tmpCanvas.height =
+                maskCanvas.height =
+                  canvasContainer.clientHeight;
 
-                let baseName = currentFile.replace(/\.[^/.]+$/, "");  // Remove extension
-                let maskName = baseName + '_mask.png';
-                let maskFile = Array.from(imageFiles).find(file => file.name === maskName);
-                if (maskFile) {
-                    const maskReader = new FileReader();
-                    maskReader.onload = function (e) {
-                        maskImage = new Image();
-                        maskImage.onload = () => {
-                            // check that the mask is the same size as the image
-                            if (maskImage.width !== currentImage.width || maskImage.height !== currentImage.height) {
-                                alert('Mask image size does not match the image size. Mask will not be displayed.');
-                                maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
-                                document.getElementById('sliderContainer').classList.add('hidden'); // Hide slider if no mask available
-                                return;
-                            }
+              resetViewParams();
+              renderAll();
+            };
+            currentImage.src = e.target.result;
+          };
+          fileReader.readAsDataURL(imageFiles[currentIndex]);
 
-                            // cleared before
-                            // clamped view params before
-                            document.getElementById('sliderContainer').classList.remove('hidden'); // Show slider if mask available
-                            renderAll();
-                        };
-                        maskImage.src = e.target.result;
-                    };
-                    maskReader.readAsDataURL(maskFile);
-                } else {
-                    maskImage = null;
-                    maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
-                    document.getElementById('sliderContainer').classList.add('hidden'); // Hide slider if no mask available
+          let baseName = currentFile.replace(/\.[^/.]+$/, "");
+          let maskName = baseName + "_mask.png";
+          let maskFile = Array.from(imageFiles).find(
+            (file) => file.name === maskName
+          );
+          if (maskFile) {
+            const maskReader = new FileReader();
+            maskReader.onload = function (e) {
+              maskImage = new Image();
+              maskImage.onload = () => {
+                // check that the mask is the same size as the image
+                if (
+                  maskImage.width !== currentImage.width ||
+                  maskImage.height !== currentImage.height
+                ) {
+                  alert(
+                    "Mask image size does not match the image size. Mask will not be displayed."
+                  );
+                  maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+                  document
+                    .getElementById("sliderContainer")
+                    .classList.add("hidden"); // Hide slider if no mask available
+                  return;
                 }
-            } else {
-                alert('Index out of bounds. This should not happen.');
-            }
+
+                // cleared before
+                // clamped view params before
+                document
+                  .getElementById("sliderContainer")
+                  .classList.remove("hidden"); // Show slider if mask available
+                renderAll();
+              };
+              maskImage.src = e.target.result;
+            };
+            maskReader.readAsDataURL(maskFile);
+          } else {
+            maskImage = null;
+            maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+            document.getElementById("sliderContainer").classList.add("hidden"); // Hide slider if no mask available
+          }
+        } else {
+          alert("Index out of bounds. This should not happen.");
         }
+      }
     </script>
-
-</body>
-
+  </body>
 </html>
