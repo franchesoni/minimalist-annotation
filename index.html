@@ -463,16 +463,11 @@
 
     document
       .getElementById("annotationDescription")
-      .addEventListener("focus", function () {
-        // remove previous description
+      .addEventListener("input", function () {
         navigationActive = false;
         annotations[currentFile] = annotations[currentFile].filter(
           (ann) => ann.type !== "desc"
         );
-      });
-    document
-      .getElementById("annotationDescription")
-      .addEventListener("blur", function () {
         annotations[currentFile].push({
           type: "desc",
           description: this.value,
