@@ -581,8 +581,18 @@
               drawingBbox = false;
             }
           }
-        }
-        if (event.button === 2) {
+        } else if (event.button === 1) {
+          // Middle-click handling for deleting annotations
+          const indexToDelete = getAnnotationIndex(event.offsetX, event.offsetY);
+          if (indexToDelete !== -1) {
+            // Remove the annotation from the array
+            annotations[currentFile].splice(indexToDelete, 1);
+            console.log("Annotation deleted.");
+            renderAll();
+          } else {
+            console.log("No annotation found near the clicked position.");
+          }
+        } else if (event.button === 2) {
           // Ensure the right mouse button was released
           if (annotationMode === "point") {
             addPoint(
@@ -600,6 +610,60 @@
         clicking = false;
       }
     });
+
+    function getAnnotationIndex(x, y) {
+      const borderTolerance = 32; // Maximum distance to consider for selection
+      let closestIndex = -1;
+      let minDistance = Infinity;
+
+      // Convert click coordinates to image coordinates
+      const imgX = (x - translateX) / scale;
+      const imgY = (y - translateY) / scale;
+
+      annotations[currentFile].forEach((ann, index) => {
+        if (ann.type === "bbox") {
+          const { x1, y1, x2, y2 } = ann;
+
+          // Calculate distances to each side
+          const distanceTop = Math.abs(imgY - y1);
+          const distanceBottom = Math.abs(imgY - y2);
+          const distanceLeft = Math.abs(imgX - x1);
+          const distanceRight = Math.abs(imgX - x2);
+
+          // Check if the click is within tolerance of any side and within the bbox boundaries
+          const isNearTop = distanceTop <= borderTolerance && imgX >= x1 && imgX <= x2;
+          const isNearBottom = distanceBottom <= borderTolerance && imgX >= x1 && imgX <= x2;
+          const isNearLeft = distanceLeft <= borderTolerance && imgY >= y1 && imgY <= y2;
+          const isNearRight = distanceRight <= borderTolerance && imgY >= y1 && imgY <= y2;
+
+          // Determine the minimum distance to a side
+          const distanceToSide = Math.min(distanceTop, distanceBottom, distanceLeft, distanceRight);
+
+          // If the click is near any side and closer than previous annotations, select it
+          if (
+            (isNearTop || isNearBottom || isNearLeft || isNearRight) &&
+            distanceToSide < minDistance
+          ) {
+            closestIndex = index;
+            minDistance = distanceToSide;
+          }
+        } else if (ann.type === "positive" || ann.type === "negative") {
+          // Calculate the distance to the point annotation
+          const pointX = ann.imgX;
+          const pointY = ann.imgY;
+          const distance = Math.hypot(imgX - pointX, imgY - pointY);
+
+          // If within tolerance and closer than previous annotations, select it
+          if (distance <= borderTolerance && distance < minDistance) {
+            closestIndex = index;
+            minDistance = distance;
+          }
+        }
+      });
+
+      return closestIndex;
+    }
+
 
     window.addEventListener("mouseup", function (event) {
       if (event.button === 0) {
