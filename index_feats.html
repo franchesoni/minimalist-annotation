@@ -278,6 +278,7 @@
     // ONNX
     let onnxSession = null;
     let isModelLoading = false;
+    let features = null;
 
     // Folder Button Trigger
     document
@@ -907,7 +908,7 @@
             renderAll();
 
             // Run ONNX inference here
-            const features = await runOnnxInference(currentImage);
+            features = await runOnnxInference(currentImage);
             if (features) {
               console.log('ONNX inference result:', features);
               // You can use the features here for further processing
