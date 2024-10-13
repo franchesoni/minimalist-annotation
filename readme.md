@@ -1,15 +1,75 @@
 
-# :fire: Simplest Image Annotation Tool :fire:
-**We created something easy to install and use... [give it a try!](https://franchesoni.github.io/minimalist-annotation/)**
+# 📍 Single File Image Annotation Tool
+
+**We created something easy to install and use... [give it a try!](https://franchesoni.github.io/single_file_annotation_tool/)**
 
 Please ⭐ if you find it useful.
 
-## Current limitations:
-- single class
-- deleting annotations only via `undo` or `clear`
-- no special treatment of predictions
+## About
+A simple yet powerful interface for annotating images by adding points and bounding boxes. This tool is useful for annotating bounding boxes and points for tasks like object detection and semantic segmentation. It is a single `.html` file, that you can open in your browser. It ensures complete privacy, as all data stays local on your device.
+
+## 🔮 Stack
+
+![HTML](https://img.shields.io/badge/html-E34F26?style=for-the-badge&logo=html5&logoColor=white)
+![CSS](https://img.shields.io/badge/css-1572B6?style=for-the-badge&logo=css3&logoColor=white)
+![JavaScript](https://img.shields.io/badge/javascript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+
+## 🌐 Project Overview
+
+This tool allows users to annotate images by adding positive/negative points or drawing bounding boxes. It features functionality for managing and saving annotations in JSON format, panning, zooming, and other customizable options. It is highly adaptable to various annotation workflows and comes with a range of features to improve the user experience.
+
+### 🔧 Features
+
+#### Visualization
+
+- **Pan**: Drag with left click.
+- **Zoom**: Scroll mouse wheel.
+- **Reset View**: Click the "Reset View" button.
+- **Next Image**: Click `Next` or press `RightArrow`.
+- **Previous Image**: Click `Previous` or press `LeftArrow`.
+
+#### Annotation
+
+- **Switch Mode**: Switch between point annotation and bounding box annotation modes.
+- **Box Annotation**: Use two left clicks per bounding box.
+- **Point Annotation**: Use left click for positive points and right click for negative points.
+- **Text Annotation**: Each image has its own text box for descriptions.
+- **Delete Annotation**: Click `Undo` or use `CTRL+Z` to remove the last annotation, or click `Clear` to remove all annotations on the current image.
+- **Save/Load**: Save your annotations to a file or load previous annotations using the `Save` and `Load` buttons.
+
+#### QOL (Quality of Life)
+- Each annotation also includes a **delete button** for easy removal and a **hide button** for better visualisation when there is an important amount of annotations.
+- **Select Annotation from Canva**: Wheel Click on a point or a bounding box put the selected annotation in **focus**.
+#### Privacy & Security
+
+This tool is entirely **browser-based** with **no data sent to any server**. Your images and annotations remain local, ensuring complete privacy. You can run the tool offline, and you are welcome to inspect the source code if you'd like to verify its behavior.
+
+:warning: Only trust the `.html` file if it comes from this repository or you have checked the source code, as it is easy to create a very similar app that steals your data.
+
+## 💻 Installation
+
+To use this tool, follow these simple steps:
+
+1. **Download** the HTML file from the repository.
+2. **Open** the file in your browser (no server required).
+3. Begin annotating your images!
+
+> This tool is fully offline and self-contained—no installation or external dependencies are required.
+
+## 🌐 Use Cases
+
+This tool is versatile and adaptable to a range of image annotation use cases, including object detection and semantic segmentation. There is a folder in the repo with an OCR annotation version contributed by [Frederic Huang](https://github.com/Huang-Frederic) in the repository.
+
+## ✉️ Feedback
+
+Open an issue in the repository or contact [Franco Marchesoni](mailto:marchesoniacland@gmail.com), [Frederic Huang](mailto:fhuang5@slb.com) or [Anne-Maelle Barneche](mailto:abarneche@slb.com).
 
 # Change log
+## 2024-10-11
+- integrate features from Fred in main script (mask removal with wheel click)
+- update this readme for future features
+- approve pull request from Frederic Huang 
+## Initial commits
 - add help
 - add load annotations button
 - add textbox
@@ -30,33 +90,3 @@ Please ⭐ if you find it useful.
 - add transparency slider for mask visualization
 - allow to flag masks as correct
 
-# The vision  
-This image annotation app is simple.
-It allows to draw bounding boxes and points.
-
-Depending on the problem, you will follow one of the annotation protocols below. For instance, for object detection, you start drawing bounding boxes, you train an object detector, you use them to predict other images, you remove some predictions, convert the rest to annotations, annotate a few more, and like that until you complete the annotation of your dataset. A text box is available for you to write annotation instructions.
-
-Another example is semantic segmentation. For each image you add a few points, train a weakly supervised segmentor, add more points considering the output of it, and so on until you find the predictions of the segmentor are correct (you should keep a few test images at hand). 
-
-
-## Annotation details
-The bounding boxes and points are referred to one image, class and object. They also are of either annotation type or prediction type. The text inputs are referred to one image. 
-Predictions can be accepted and be converted into annotation type. This enables one to run human-in-the-loop learning.
-Mask predictions are only used for visualization, there is no interactive behavior (more on human-in-the-loop learning later). They can however be accepted and converted into annotations.
-
-## Current version
-This version is binary, i.e. at most one class is allowed.
-For points, at most one object per image is allowed.
-This restricts the applications to binary object detection and binary semantic segmentation.
-
-## How are annotations used? Annotation protocols
-We consider a few learning paradigms to be run from the annotations.
-
-1. *train weak semantic segmentor:* add positive and negative points on many images, train a weakly supervised segmentor, predict, add more points, train, predict, add more points, and so on, until performance is sufficient.
-2. *weak semantic segmentation for annotation of masks:* Same process as 1., but when a prediction is satisfactory, it can be flagged as mask. Then one can train a fully-supervised segmentor over the masks.
-3. *interactive image segmentation for annotation of masks:* similar to 2., but points should be added in all images. A segmentor that can handle point prompts is used to generate masks. Masks are flagged as accepted and later used for training a segmentor.
-4. *object detection:* draw your bounding boxes exhaustively over all objects on all the images you see. If you saw an image and don't want to label exhaustively, flag it as "ignore" (all unseen images are ignored by default). 
-
-Catches:
-- if you don't draw exhaustive bounding boxes, you're introducing noise to the training of the object detector. 
-- if you think about using IIS later, you need to annotate each and every image you want to include in your training set
