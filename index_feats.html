@@ -278,7 +278,9 @@
     // ONNX
     let onnxSession = null;
     let isModelLoading = false;
-    let features = null;
+    let featureVectors = null;
+    let vectorLabels = null;
+    let imgFeatures = null;
 
     // Folder Button Trigger
     document
@@ -877,9 +879,11 @@
 
         const tensor = await ort.Tensor.fromImage(resizedImageData);
         const feeds = { input0: tensor };
-        const results = await onnxSession.run(feeds);
-        const feats = await results['output0'].getData();
-        return nj.array(feats).reshape(384, 37, 37);
+        imgFeatures = await onnxSession.run(feeds);
+
+        // const feats = await results['output0'].getData();
+        // return nj.array(feats).reshape(384, 37, 37);
+        return imgFeatures;
       } catch (error) {
         console.error('Error running ONNX inference:', error);
         return null;
