@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="js/scripts.js" defer></script>
+</head>
+<!-- We have an initial page with the selectFolderButton and some text -->
+<body>
+  <div class="button-container">
+    <button id="selectFolderButton" style="font-size: x-large">
+      Select Folder
+    </button>
+    <input type="file" id="folderInput" class="hidden" webkitdirectory directory multiple />
+    <!-- We have prev, next, reset, clear, undo, mode, download, load and help buttons -->
+    <button id="prevButton" class="hidden">Previous</button>
+    <button id="nextButton" class="hidden">Next</button>
+    <button id="resetViewButton" class="hidden">Reset View</button>
+    <button id="clearButton" class="hidden">Clear</button>
+    <button id="undoButton" class="hidden">Undo</button>
+    <button id="toggleModeButton" class="hidden">
+      Switch to Bounding Box Mode
+    </button>
+    <button id="downloadButton" class="hidden">Save Annotations</button>
+    <button id="loadAnnotationsButton" class="hidden">
+      Load Annotations
+    </button>
+    <input type="file" id="loadFileInput" class="hidden" accept=".json" />
+    <button id="helpButton" class="hidden">?</button>
+  </div>
+  <!-- This is the privacy message shown at startup -->
+  <p id="privacy" style="width: 50%; text-align: justify">
+    <strong>Privacy note:</strong> The app is running on your browser and no
+    data is ever sent. You can always disable your
+    internet connection or check the
+    <a href="https://github.com/franchesoni/minimalist-annotation/blob/main/index.html">source code</a>
+    if in doubt.
+  </p>
+  <!-- Overlapping canvases: image, mask, ann, tmp, crosshair -->
+  <div id="canvasContainer" class="hidden">
+    <canvas id="imageCanvas"></canvas>
+    <canvas id="maskCanvas"></canvas>
+    <canvas id="annCanvas"></canvas>
+    <canvas id="tmpCanvas"></canvas>
+    <canvas id="crosshairCanvas"></canvas>
+  </div>
+  <!-- Input textbox for image-wide description -->
+  <div class="input-container">
+    <input type="text" id="imageTextAnnotation" class="hidden" />
+  </div>
+  <!-- A separate canvas for other things -->
+  <div id="extraCanvasContainer" class="hidden">
+    <canvas id="extraCanvas"></canvas>
+  </div>
+  <!-- Add the mask transparency slider -->
+  <div class="slider-container hidden" id="sliderContainer">
+    <label class="slider-label" for="alphaSlider">Mask Opacity:</label>
+    <input type="range" id="alphaSlider" min="0" max="100" value="30" />
+  </div>
+  <!-- Help Modal -->
+  <div id="helpModal" class="modal hidden">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>How to Use This App</h2>
+      <p><strong>Visualization</strong></p>
+      <ul>
+        <li><strong>Pan:</strong> Drag with left click.</li>
+        <li><strong>Zoom:</strong> Scroll mouse wheel.</li>
+        <li><strong>Reset View:</strong> Click the "Reset View" button.</li>
+        <li>
+          <strong>Next image:</strong> Click on `Next`or press `D` or
+          `LeftArrow`
+        </li>
+        <li>
+          <strong>Previous image:</strong> Click on `Previous` or press `A` or
+          `RightArrow`
+        </li>
+        <li>
+          <strong>Overlay mask:</strong> Save along your `imgname.jpg` the
+          mask `imgname_mask.png`.
+        </li>
+      </ul>
+      <p><strong>Annotation</strong></p>
+      <ul>
+        <li>
+          <strong>Switch Mode:</strong> Toggle between point annotation and
+          bounding box annotation modes.
+        </li>
+        <li>
+          <strong>Box Annotation:</strong> Use two left clicks per bounding
+          box.
+        </li>
+        <li>
+          <strong>Point Annotation:</strong> Use both left (positive) and
+          right (negative) clicks.
+        </li>
+        <li>
+          <strong>Text Annotation:</strong> Insert or edit the contents of the
+          textbox.
+        </li>
+        <li>
+          <strong>Delete Annotation:</strong> Click `Undo` or `CTRL+Z` to remove
+          the last annotation or `Clear` to remove all annotations over the
+          current image. Wheel click on an annotation to delete it.
+        </li>
+        <li>
+          <strong>Save/Load:</strong> Save your annotations to a file or load
+          previous annotations using `Save` and `Load`.
+        </li>
+      </ul>
+      <p>
+        <strong>Feedback:</strong>
+        <a href="https://github.com/franchesoni/minimalist-annotation">repository</a>,
+        <a href="mailto:marchesoniacland@gmail.com">email</a>
+      </p>
+    </div>
+  </div>
+
+</body>
+
+</html>
