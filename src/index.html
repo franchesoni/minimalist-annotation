@@ -292,12 +292,14 @@
           );
 
           // Second canvas
-          this.extraCanvasContainer = document.getElementById("extraCanvasContainer");
+          this.extraCanvasContainer = document.getElementById(
+            "extraCanvasContainer"
+          );
           this.extraCanvas = document.getElementById("extraCanvas");
           this.extraCtx = this.extraCanvas.getContext("2d");
           this.extraCanvas.width = this.extraCanvasContainer.clientWidth;
           this.extraCanvas.height = this.extraCanvasContainer.clientHeight;
-          console.log("extra canvas set")
+          console.log("extra canvas set");
         }
 
         // Show the canvas and annotation elements
@@ -323,7 +325,7 @@
           this.resetViewParams(currentImage);
           this.renderAll(annotations, currentFile, currentImage, maskImage);
 
-          // Set up the extra canvas           
+          // Set up the extra canvas
           this.extraCanvas.width = this.extraCanvasContainer.clientWidth;
           this.extraCanvas.height = this.extraCanvasContainer.clientHeight;
         }
@@ -388,8 +390,6 @@
             currentImage.height * this.scale
           );
         }
-
-
 
         // Draw a crosshair on the canvas
         drawCrosshair(x, y) {
