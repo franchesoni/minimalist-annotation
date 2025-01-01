@@ -1,123 +1,1133 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- <link rel="stylesheet" href="styles.css" /> -->
+    <!-- <script type="module" src="js/scripts.js" defer></script> -->
+    <style>
+      body {
+        background-color: #121212;
+        color: #e0e0e0;
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+      }
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="styles.css">
-  <script type="module" src="js/scripts.js" defer></script>
-</head>
-<!-- We have an initial page with the selectFolderButton and some text -->
-<body>
-  <div class="button-container">
-    <button id="selectFolderButton" style="font-size: x-large">
-      Select Folder
-    </button>
-    <input type="file" id="folderInput" class="hidden" webkitdirectory directory multiple />
-    <!-- We have prev, next, reset, clear, undo, mode, download, load and help buttons -->
-    <button id="prevButton" class="hidden">Previous</button>
-    <button id="nextButton" class="hidden">Next</button>
-    <button id="resetViewButton" class="hidden">Reset View</button>
-    <button id="clearButton" class="hidden">Clear</button>
-    <button id="undoButton" class="hidden">Undo</button>
-    <button id="toggleModeButton" class="hidden">
-      Switch to Bounding Box Mode
-    </button>
-    <button id="downloadButton" class="hidden">Save Annotations</button>
-    <button id="loadAnnotationsButton" class="hidden">
-      Load Annotations
-    </button>
-    <input type="file" id="loadFileInput" class="hidden" accept=".json" />
-    <button id="helpButton" class="hidden">?</button>
-  </div>
-  <!-- This is the privacy message shown at startup -->
-  <p id="privacy" style="width: 50%; text-align: justify">
-    <strong>Privacy note:</strong> The app is running on your browser and no
-    data is ever sent. You can always disable your
-    internet connection or check the
-    <a href="https://github.com/franchesoni/minimalist-annotation/blob/main/index.html">source code</a>
-    if in doubt.
-  </p>
-  <!-- Overlapping canvases: image, mask, ann, tmp, crosshair -->
-  <div id="canvasContainer" class="hidden">
-    <canvas id="imageCanvas"></canvas>
-    <canvas id="maskCanvas"></canvas>
-    <canvas id="annCanvas"></canvas>
-    <canvas id="tmpCanvas"></canvas>
-    <canvas id="crosshairCanvas"></canvas>
-  </div>
-  <!-- Input textbox for image-wide description -->
-  <div class="input-container">
-    <input type="text" id="imageTextAnnotation" class="hidden" />
-  </div>
-  <!-- A separate canvas for other things -->
-  <div id="extraCanvasContainer" class="hidden">
-    <canvas id="extraCanvas"></canvas>
-  </div>
-  <!-- Add the mask transparency slider -->
-  <div class="slider-container hidden" id="sliderContainer">
-    <label class="slider-label" for="alphaSlider">Mask Opacity:</label>
-    <input type="range" id="alphaSlider" min="0" max="100" value="30" />
-  </div>
-  <!-- Help Modal -->
-  <div id="helpModal" class="modal hidden">
-    <div class="modal-content">
-      <span class="close">&times;</span>
-      <h2>How to Use This App</h2>
-      <p><strong>Visualization</strong></p>
-      <ul>
-        <li><strong>Pan:</strong> Drag with left click.</li>
-        <li><strong>Zoom:</strong> Scroll mouse wheel.</li>
-        <li><strong>Reset View:</strong> Click the "Reset View" button.</li>
-        <li>
-          <strong>Next image:</strong> Click on `Next`or press `D` or
-          `LeftArrow`
-        </li>
-        <li>
-          <strong>Previous image:</strong> Click on `Previous` or press `A` or
-          `RightArrow`
-        </li>
-        <li>
-          <strong>Overlay mask:</strong> Save along your `imgname.jpg` the
-          mask `imgname_mask.png`.
-        </li>
-      </ul>
-      <p><strong>Annotation</strong></p>
-      <ul>
-        <li>
-          <strong>Switch Mode:</strong> Toggle between point annotation and
-          bounding box annotation modes.
-        </li>
-        <li>
-          <strong>Box Annotation:</strong> Use two left clicks per bounding
-          box.
-        </li>
-        <li>
-          <strong>Point Annotation:</strong> Use both left (positive) and
-          right (negative) clicks.
-        </li>
-        <li>
-          <strong>Text Annotation:</strong> Insert or edit the contents of the
-          textbox.
-        </li>
-        <li>
-          <strong>Delete Annotation:</strong> Click `Undo` or `CTRL+Z` to remove
-          the last annotation or `Clear` to remove all annotations over the
-          current image. Wheel click on an annotation to delete it.
-        </li>
-        <li>
-          <strong>Save/Load:</strong> Save your annotations to a file or load
-          previous annotations using `Save` and `Load`.
-        </li>
-      </ul>
-      <p>
-        <strong>Feedback:</strong>
-        <a href="https://github.com/franchesoni/minimalist-annotation">repository</a>,
-        <a href="mailto:marchesoniacland@gmail.com">email</a>
-      </p>
+      .button-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 10px;
+        margin-top: 10px;
+      }
+
+      button {
+        background-color: #333;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        margin: 5px;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background-color: #555;
+      }
+
+      #canvasContainer {
+        width: 90%;
+        max-width: 1024px;
+        height: 80vh;
+        border: 3px solid #333;
+        border-radius: 10px;
+        overflow: hidden;
+        position: relative;
+        cursor: crosshair;
+      }
+
+      #extraCanvasContainer {
+        width: 90%;
+        max-width: 1024px;
+        height: 80vh;
+        border: 3px solid #333;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-top: 20px;
+      }
+
+      canvas {
+        position: absolute;
+        /* top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%; */
+      }
+
+      .input-container {
+        margin-top: 20px;
+        /* Spacing between canvas and textbox */
+      }
+
+      input[type="text"] {
+        padding: 10px;
+        background-color: #e0e0e0;
+        width: 80vh;
+        height: 5vh;
+        border-radius: 5px;
+        border: 1px solid #333;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      /* Modal styles */
+      .modal {
+        display: none;
+        /* Hidden by default */
+        position: fixed;
+        /* Stay in place */
+        z-index: 1;
+        /* Sit on top */
+        left: 0;
+        top: 0;
+        width: 100%;
+        /* Full width */
+        height: 100%;
+        /* Full height */
+        overflow: auto;
+        /* Enable scroll if needed */
+        background-color: rgb(0, 0, 0);
+        /* Fallback color */
+        background-color: rgba(0, 0, 0, 0.4);
+        /* Black w/ opacity */
+      }
+
+      .modal-content {
+        background-color: #121212;
+        margin: 10% auto;
+        /* 15% from the top and centered */
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        /* Could be more or less, depending on screen size */
+      }
+
+      .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+      }
+
+      .close:hover,
+      .close:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <!-- We have an initial page with the selectFolderButton and some text -->
+  <body>
+    <div class="button-container">
+      <button id="selectFolderButton" style="font-size: x-large">
+        Select Folder
+      </button>
+      <input
+        type="file"
+        id="folderInput"
+        class="hidden"
+        webkitdirectory
+        directory
+        multiple
+      />
+      <!-- We have prev, next, reset, clear, undo, mode, download, load and help buttons -->
+      <button id="prevButton" class="hidden">Previous</button>
+      <button id="nextButton" class="hidden">Next</button>
+      <button id="resetViewButton" class="hidden">Reset View</button>
+      <button id="clearButton" class="hidden">Clear</button>
+      <button id="undoButton" class="hidden">Undo</button>
+      <button id="toggleModeButton" class="hidden">
+        Switch to Bounding Box Mode
+      </button>
+      <button id="downloadButton" class="hidden">Save Annotations</button>
+      <button id="loadAnnotationsButton" class="hidden">
+        Load Annotations
+      </button>
+      <input type="file" id="loadFileInput" class="hidden" accept=".json" />
+      <button id="helpButton" class="hidden">?</button>
     </div>
-  </div>
+    <!-- This is the privacy message shown at startup -->
+    <p id="privacy" style="width: 50%; text-align: justify">
+      <strong>Privacy note:</strong> The app is running on your browser and no
+      data is ever sent. You can always disable your internet connection or
+      check the
+      <a
+        href="https://github.com/franchesoni/minimalist-annotation/blob/main/index.html"
+        >source code</a
+      >
+      if in doubt.
+    </p>
+    <!-- Overlapping canvases: image, mask, ann, tmp, crosshair -->
+    <div id="canvasContainer" class="hidden">
+      <canvas id="imageCanvas"></canvas>
+      <canvas id="maskCanvas"></canvas>
+      <canvas id="annCanvas"></canvas>
+      <canvas id="tmpCanvas"></canvas>
+      <canvas id="crosshairCanvas"></canvas>
+    </div>
+    <!-- Input textbox for image-wide description -->
+    <div class="input-container">
+      <input type="text" id="imageTextAnnotation" class="hidden" />
+    </div>
+    <!-- Add the mask transparency slider -->
+    <div class="slider-container hidden" id="sliderContainer">
+      <label class="slider-label" for="alphaSlider">Mask Opacity:</label>
+      <input type="range" id="alphaSlider" min="0" max="100" value="30" />
+    </div>
+    <div id="extraCanvasContainer">
+      <canvas id="extraCanvas"></canvas>
+    </div>
+    <!-- Help Modal -->
+    <div id="helpModal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>How to Use This App</h2>
+        <p><strong>Visualization</strong></p>
+        <ul>
+          <li><strong>Pan:</strong> Drag with left click.</li>
+          <li><strong>Zoom:</strong> Scroll mouse wheel.</li>
+          <li><strong>Reset View:</strong> Click the "Reset View" button.</li>
+          <li>
+            <strong>Next image:</strong> Click on `Next`or press `D` or
+            `LeftArrow`
+          </li>
+          <li>
+            <strong>Previous image:</strong> Click on `Previous` or press `A` or
+            `RightArrow`
+          </li>
+          <li>
+            <strong>Overlay mask:</strong> Save along your `imgname.jpg` the
+            mask `imgname_mask.png`.
+          </li>
+        </ul>
+        <p><strong>Annotation</strong></p>
+        <ul>
+          <li>
+            <strong>Switch Mode:</strong> Toggle between point annotation and
+            bounding box annotation modes.
+          </li>
+          <li>
+            <strong>Box Annotation:</strong> Use two left clicks per bounding
+            box.
+          </li>
+          <li>
+            <strong>Point Annotation:</strong> Use both left (positive) and
+            right (negative) clicks.
+          </li>
+          <li>
+            <strong>Text Annotation:</strong> Insert or edit the contents of the
+            textbox.
+          </li>
+          <li>
+            <strong>Delete Annotation:</strong> Click `Undo` or `CTRL+Z` to
+            remove the last annotation or `Clear` to remove all annotations over
+            the current image. Wheel click on an annotation to delete it.
+          </li>
+          <li>
+            <strong>Save/Load:</strong> Save your annotations to a file or load
+            previous annotations using `Save` and `Load`.
+          </li>
+        </ul>
+        <p>
+          <strong>Feedback:</strong>
+          <a href="https://github.com/franchesoni/minimalist-annotation"
+            >repository</a
+          >,
+          <a href="mailto:marchesoniacland@gmail.com">email</a>
+        </p>
+      </div>
+    </div>
 
-</body>
+    <script>
+      class CanvasState {
+        constructor() {
+          // Get references to canvas elements and their contexts
+          this.canvasContainer = document.getElementById("canvasContainer");
+          this.imageCanvas = document.getElementById("imageCanvas");
+          this.maskCanvas = document.getElementById("maskCanvas");
+          this.annCanvas = document.getElementById("annCanvas");
+          this.tmpCanvas = document.getElementById("tmpCanvas");
+          this.crosshairCanvas = document.getElementById("crosshairCanvas");
 
+          this.imageCtx = this.imageCanvas.getContext("2d");
+          this.maskCtx = this.maskCanvas.getContext("2d");
+          this.annCtx = this.annCanvas.getContext("2d");
+          this.tmpCtx = this.tmpCanvas.getContext("2d");
+          this.crosshairCtx = this.crosshairCanvas.getContext("2d");
+          this.maskCtx.globalAlpha = 0.3; // Set initial transparency for the mask canvas
+
+          // Initialize view transformation parameters
+          this.translateX = 0;
+          this.translateY = 0;
+          this.scale = 1;
+
+          // Define constants for margins and point size
+          this.margin = 20; // Margin around the canvas
+          this.rc = 5; // Half-width of point marker squares
+
+          // Elements for controlling transparency and text annotations
+          this.sliderContainer = document.getElementById("sliderContainer");
+          this.alphaSlider = document.getElementById("alphaSlider");
+          this.imageTextAnnotationElement = document.getElementById(
+            "imageTextAnnotation"
+          );
+
+          // Second canvas
+          this.extraCanvasContainer = document.getElementById("extraCanvasContainer");
+          this.extraCanvas = document.getElementById("extraCanvas");
+          this.extraCtx = this.extraCanvas.getContext("2d");
+          this.extraCanvas.width = this.extraCanvasContainer.clientWidth;
+          this.extraCanvas.height = this.extraCanvasContainer.clientHeight;
+          console.log("extra canvas set")
+        }
+
+        // Show the canvas and annotation elements
+        unhide() {
+          this.imageTextAnnotationElement.classList.remove("hidden");
+          this.canvasContainer.classList.remove("hidden");
+        }
+
+        // Initialize canvases with sizes matching the container and render content
+        setupCanvases(annotations, currentFile, currentImage, maskImage) {
+          this.imageCanvas.width =
+            this.maskCanvas.width =
+            this.annCanvas.width =
+            this.tmpCanvas.width =
+            this.crosshairCanvas.width =
+              this.canvasContainer.clientWidth;
+          this.imageCanvas.height =
+            this.maskCanvas.height =
+            this.annCanvas.height =
+            this.tmpCanvas.height =
+            this.crosshairCanvas.height =
+              this.canvasContainer.clientHeight;
+          this.resetViewParams(currentImage);
+          this.renderAll(annotations, currentFile, currentImage, maskImage);
+
+          // Set up the extra canvas           
+          this.extraCanvas.width = this.extraCanvasContainer.clientWidth;
+          this.extraCanvas.height = this.extraCanvasContainer.clientHeight;
+        }
+
+        // Reset view parameters to center and fit the image within the canvas
+        resetViewParams(currentImage) {
+          const maxCanvasWidth = this.imageCanvas.width - 2 * this.margin;
+          const maxCanvasHeight = this.imageCanvas.height - 2 * this.margin;
+          this.scale = Math.min(
+            maxCanvasWidth / currentImage.width,
+            maxCanvasHeight / currentImage.height
+          );
+          this.translateX =
+            (this.imageCanvas.width - currentImage.width * this.scale) / 2;
+          this.translateY =
+            (this.imageCanvas.height - currentImage.height * this.scale) / 2;
+        }
+
+        // Clamp translations to prevent excessive panning
+        applyClamping(currentImage) {
+          this.translateX = Math.max(
+            Math.min(this.imageCanvas.width - this.margin, this.translateX),
+            this.margin - currentImage.width * this.scale
+          );
+          this.translateY = Math.max(
+            Math.min(this.imageCanvas.height - this.margin, this.translateY),
+            this.margin - currentImage.height * this.scale
+          );
+        }
+
+        // Draw the main image on the canvas
+        drawImageCanvas(currentImage) {
+          this.imageCtx.clearRect(
+            0,
+            0,
+            this.imageCanvas.width,
+            this.imageCanvas.height
+          );
+          this.applyClamping(currentImage);
+          this.imageCtx.drawImage(
+            currentImage,
+            this.translateX,
+            this.translateY,
+            currentImage.width * this.scale,
+            currentImage.height * this.scale
+          );
+        }
+
+        drawExtraCanvas(currentImage) {
+          this.extraCtx.clearRect(
+            0,
+            0,
+            this.extraCanvas.width,
+            this.extraCanvas.height
+          );
+          this.applyClamping(currentImage);
+          this.extraCtx.drawImage(
+            currentImage,
+            this.translateX,
+            this.translateY,
+            currentImage.width * this.scale,
+            currentImage.height * this.scale
+          );
+        }
+
+
+
+        // Draw a crosshair on the canvas
+        drawCrosshair(x, y) {
+          this.crosshairCtx.clearRect(
+            0,
+            0,
+            this.crosshairCanvas.width,
+            this.crosshairCanvas.height
+          );
+
+          const tolerance = 5; // Border tolerance to avoid drawing near edges
+
+          if (
+            x <= tolerance ||
+            x >= this.crosshairCanvas.width - tolerance ||
+            y <= tolerance ||
+            y >= this.crosshairCanvas.height - tolerance
+          ) {
+            return; // Skip drawing if near the borders
+          }
+
+          this.crosshairCtx.strokeStyle = "red";
+          this.crosshairCtx.beginPath();
+          this.crosshairCtx.moveTo(x, 0);
+          this.crosshairCtx.lineTo(x, this.crosshairCanvas.height);
+          this.crosshairCtx.moveTo(0, y);
+          this.crosshairCtx.lineTo(this.crosshairCanvas.width, y);
+          this.crosshairCtx.stroke();
+        }
+
+        // Render all canvases, annotations, and optional mask
+        renderAll(annotations, currentFile, currentImage, maskImage) {
+          this.annCtx.clearRect(
+            0,
+            0,
+            this.annCanvas.width,
+            this.annCanvas.height
+          );
+          this.tmpCtx.clearRect(
+            0,
+            0,
+            this.tmpCanvas.width,
+            this.tmpCanvas.height
+          );
+          this.drawImageCanvas(currentImage);
+
+          if (maskImage) {
+            this.sliderContainer.classList.remove("hidden");
+            this.maskCtx.clearRect(
+              0,
+              0,
+              this.maskCanvas.width,
+              this.maskCanvas.height
+            );
+            this.maskCtx.globalAlpha = this.alphaSlider.value / 100;
+            this.maskCtx.drawImage(
+              maskImage,
+              this.translateX,
+              this.translateY,
+              maskImage.width * this.scale,
+              maskImage.height * this.scale
+            );
+          } else {
+            this.sliderContainer.classList.add("hidden");
+          }
+
+          let deleteDescription = true; // Tracks if the text annotation should be cleared
+
+          annotations[currentFile].forEach((ann) => {
+            if (ann.type === "bbox") {
+              this.annCtx.strokeStyle = "green";
+              this.annCtx.lineWidth = 4;
+              const x1 = ann.x1 * this.scale + this.translateX;
+              const y1 = ann.y1 * this.scale + this.translateY;
+              const x2 = ann.x2 * this.scale + this.translateX;
+              const y2 = ann.y2 * this.scale + this.translateY;
+              this.annCtx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+            } else if (ann.type === "desc") {
+              deleteDescription = false;
+              this.imageTextAnnotationElement.value = ann.description;
+            } else {
+              this.annCtx.fillStyle = ann.type === "positive" ? "green" : "red";
+              const x = ann.imgX * this.scale + this.translateX;
+              const y = ann.imgY * this.scale + this.translateY;
+              this.annCtx.fillRect(
+                x - this.rc,
+                y - this.rc,
+                2 * this.rc,
+                2 * this.rc
+              );
+            }
+          });
+
+          if (deleteDescription) {
+            this.imageTextAnnotationElement.value = "";
+          }
+
+          this.drawExtraCanvas(currentImage);
+        }
+      }
+
+      class DataManager {
+        constructor() {
+          // Initialize properties for annotations, file lists, and current state
+          this.annotations = {};
+          this.imageFiles = [];
+          this.currentIndex = 0;
+          this.currentFile = null;
+          this.currentImage = null;
+          this.maskImage = null;
+        }
+
+        async decrementDataIndex() {
+          // Move to the previous file in the list, if possible
+          if (this.currentIndex > 0) {
+            this.currentIndex--;
+            await this._loadSample();
+          }
+        }
+
+        async incrementDataIndex() {
+          // Move to the next file in the list, if possible
+          if (this.currentIndex < this.imageFiles.length - 1) {
+            this.currentIndex++;
+            await this._loadSample();
+          }
+        }
+
+        async loadFiles(event) {
+          // Load image files from the selected folder
+          const files = event.target.files;
+          this.imageFiles = [];
+          this.annotations = {};
+
+          for (const file of files) {
+            if (file.type.startsWith("image")) {
+              this.imageFiles.push(file);
+            }
+          }
+
+          const numberOfFiles = this.imageFiles.length;
+          if (numberOfFiles > 0) {
+            await this._loadSample();
+          }
+          return numberOfFiles;
+        }
+
+        async loadAnnotations(event) {
+          // Load annotations from a JSON file
+          const file = event.target.files[0];
+          if (file && file.type === "application/json") {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              try {
+                const loadedAnnotations = JSON.parse(e.target.result);
+                if (typeof loadedAnnotations === "object") {
+                  this.annotations = loadedAnnotations;
+                } else {
+                  throw new Error("Invalid JSON format");
+                }
+              } catch (err) {
+                alert("Failed to load annotations: " + err.message);
+              }
+            };
+            reader.readAsText(file);
+          } else {
+            alert("Please select a valid JSON file.");
+          }
+        }
+
+        clearAnnotations() {
+          // Clear all annotations for the current file
+          if (this.currentFile) {
+            this.annotations[this.currentFile] = [];
+          }
+        }
+
+        undoLastAnnotation() {
+          // Remove the last annotation for the current file
+          if (
+            this.currentFile &&
+            this.annotations[this.currentFile]?.length > 0
+          ) {
+            this.annotations[this.currentFile].pop();
+          }
+        }
+
+        downloadAnnotations() {
+          // Download annotations as a JSON file
+          const dataStr =
+            "data:text/json;charset=utf-8," +
+            encodeURIComponent(JSON.stringify(this.annotations));
+          const downloadAnchorNode = document.createElement("a");
+          downloadAnchorNode.setAttribute("href", dataStr);
+          downloadAnchorNode.setAttribute("download", "annotations.json");
+          document.body.appendChild(downloadAnchorNode);
+          downloadAnchorNode.click();
+          downloadAnchorNode.remove();
+        }
+
+        addPoint(x, y, type) {
+          // Add a point annotation for the current file
+          if (this.currentFile) {
+            this.annotations[this.currentFile].push({
+              imgX: x,
+              imgY: y,
+              type: type,
+            });
+          }
+        }
+
+        addBoundingBox(start, end) {
+          // Add a bounding box annotation for the current file
+          if (this.currentFile) {
+            const bbox = {
+              x1: Math.min(start.x, end.x),
+              y1: Math.min(start.y, end.y),
+              x2: Math.max(start.x, end.x),
+              y2: Math.max(start.y, end.y),
+              type: "bbox",
+            };
+            this.annotations[this.currentFile].push(bbox);
+          }
+        }
+
+        async _loadSample() {
+          // Load the current image and its optional mask
+          if (
+            this.currentIndex >= 0 &&
+            this.currentIndex < this.imageFiles.length
+          ) {
+            this.currentFile = this.imageFiles[this.currentIndex].name;
+            this.annotations[this.currentFile] =
+              this.annotations[this.currentFile] || [];
+
+            this.currentImage = await this.loadImage(
+              this.imageFiles[this.currentIndex]
+            );
+
+            const directory = this.currentFile.substring(
+              0,
+              this.currentFile.lastIndexOf("/") + 1
+            );
+            const baseName = this.currentFile
+              .replace(/^.*[\\/]/, "")
+              .replace(/\.[^/.]+$/, "");
+            const maskName = `${directory}${baseName}_mask.png`;
+            const maskFile = this.imageFiles.find(
+              (file) => file.name === maskName
+            );
+
+            if (maskFile) {
+              const tempMaskImage = await this.loadImage(maskFile);
+
+              // Validate the mask dimensions
+              if (
+                tempMaskImage.width !== this.currentImage.width ||
+                tempMaskImage.height !== this.currentImage.height
+              ) {
+                alert(
+                  "Mask image size does not match the image size. Mask will not be displayed."
+                );
+                this.maskImage = null;
+              } else {
+                this.maskImage = tempMaskImage;
+              }
+            } else {
+              this.maskImage = null;
+            }
+          } else {
+            // Handle out-of-bounds index gracefully
+            alert("Index out of bounds. This should not happen.");
+          }
+        }
+
+        // Helper method to load image and await its load
+        loadImage(file) {
+          return new Promise((resolve, reject) => {
+            const fileReader = new FileReader();
+            fileReader.onload = (e) => {
+              const img = new Image();
+              img.onload = () => resolve(img);
+              img.onerror = reject;
+              img.src = e.target.result;
+            };
+            fileReader.onerror = reject;
+            fileReader.readAsDataURL(file);
+          });
+        }
+      }
+
+      class AnnotationManager {
+        constructor(dataManager, canvasState) {
+          this.dataManager = dataManager; // Handles annotation data and file management
+          this.canvasState = canvasState; // Manages canvas rendering and interactions
+          this.annotationMode = "point"; // Tracks the current annotation mode ("point" or "bbox")
+          this.writingTextAnnotation = false; // Tracks whether a text annotation is being edited
+          this.clicking = false; // Tracks if the mouse is clicking
+          this.drawingBbox = false; // Tracks if a bounding box is being drawn
+          this.dragging = false; // Tracks if the canvas is being dragged
+          this.bboxStart = null; // Starting point of a bounding box
+          this.lastX = 0; // Last X position for dragging
+          this.lastY = 0; // Last Y position for dragging
+        }
+
+        setupEventHandlers() {
+          // Handles input for text annotations
+          this.canvasState.imageTextAnnotationElement.addEventListener(
+            "input",
+            () => {
+              this.writingTextAnnotation = true;
+              this.dataManager.annotations[this.dataManager.currentFile] =
+                this.dataManager.annotations[
+                  this.dataManager.currentFile
+                ].filter((ann) => ann.type !== "desc");
+              this.dataManager.annotations[this.dataManager.currentFile].push({
+                type: "desc",
+                description: this.canvasState.imageTextAnnotationElement.value,
+              });
+              this.reRender();
+              this.writingTextAnnotation = false;
+            }
+          );
+
+          // Debounces frequent updates when interacting with the slider
+          const debouncedUpdate = debounce(this.reRender.bind(this), 100);
+          this.canvasState.alphaSlider.addEventListener("input", () => {
+            debouncedUpdate();
+          });
+
+          // Disables the context menu to allow custom mouse actions
+          window.addEventListener("contextmenu", (event) => {
+            event.preventDefault();
+          });
+
+          // Handles mouse movement over the canvas
+          this.canvasState.crosshairCanvas.addEventListener(
+            "mousemove",
+            (event) => {
+              this.canvasState.drawCrosshair(event.offsetX, event.offsetY); // Draws a crosshair on the canvas
+
+              this.clicking = false; // Reset clicking state if the mouse moves
+              if (this.drawingBbox) {
+                // Updates the temporary bounding box during drawing
+                this.canvasState.tmpCtx.clearRect(
+                  0,
+                  0,
+                  this.canvasState.tmpCanvas.width,
+                  this.canvasState.tmpCanvas.height
+                );
+                this.canvasState.tmpCtx.strokeStyle = "violet";
+                this.canvasState.tmpCtx.lineWidth = 4;
+                const x1 = Math.min(
+                  event.offsetX,
+                  this.bboxStart.x * this.canvasState.scale +
+                    this.canvasState.translateX
+                );
+                const y1 = Math.min(
+                  event.offsetY,
+                  this.bboxStart.y * this.canvasState.scale +
+                    this.canvasState.translateY
+                );
+                const x2 = Math.max(
+                  event.offsetX,
+                  this.bboxStart.x * this.canvasState.scale +
+                    this.canvasState.translateX
+                );
+                const y2 = Math.max(
+                  event.offsetY,
+                  this.bboxStart.y * this.canvasState.scale +
+                    this.canvasState.translateY
+                );
+                this.canvasState.tmpCtx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+              }
+              if (this.dragging) {
+                // Handles canvas dragging
+                const dx = event.offsetX - this.lastX;
+                const dy = event.offsetY - this.lastY;
+                this.canvasState.translateX += dx;
+                this.canvasState.translateY += dy;
+                this.lastX = event.offsetX;
+                this.lastY = event.offsetY;
+                this.reRender();
+              }
+            }
+          );
+
+          // Tracks mouse down events for dragging and annotation
+          this.canvasState.crosshairCanvas.addEventListener(
+            "mousedown",
+            (event) => {
+              this.clicking = true;
+              if (event.button === 0) {
+                this.dragging = true;
+                this.lastX = event.offsetX;
+                this.lastY = event.offsetY;
+              }
+            }
+          );
+
+          // Handles mouse up events for annotations and resetting states
+          this.canvasState.crosshairCanvas.addEventListener(
+            "mouseup",
+            (event) => {
+              if (this.clicking) {
+                if (event.button === 0) {
+                  // Left mouse button: adds annotations
+                  if (this.annotationMode === "point") {
+                    this.dataManager.addPoint(
+                      (event.offsetX - this.canvasState.translateX) /
+                        this.canvasState.scale,
+                      (event.offsetY - this.canvasState.translateY) /
+                        this.canvasState.scale,
+                      "positive"
+                    );
+                    this.reRender();
+                  } else if (this.annotationMode === "bbox") {
+                    if (!this.bboxStart) {
+                      // Starts a new bounding box
+                      this.bboxStart = {
+                        x:
+                          (event.offsetX - this.canvasState.translateX) /
+                          this.canvasState.scale,
+                        y:
+                          (event.offsetY - this.canvasState.translateY) /
+                          this.canvasState.scale,
+                      };
+                      this.drawingBbox = true;
+                    } else {
+                      // Completes the bounding box and adds it to annotations
+                      this.dataManager.addBoundingBox(this.bboxStart, {
+                        x:
+                          (event.offsetX - this.canvasState.translateX) /
+                          this.canvasState.scale,
+                        y:
+                          (event.offsetY - this.canvasState.translateY) /
+                          this.canvasState.scale,
+                      });
+                      this.bboxStart = null;
+                      this.drawingBbox = false;
+                      this.reRender();
+                    }
+                  }
+                } else if (event.button === 1) {
+                  // Middle mouse button: deletes annotations
+                  const indexToDelete = this.getAnnotationIndex(
+                    event.offsetX,
+                    event.offsetY
+                  );
+                  if (indexToDelete !== -1) {
+                    this.dataManager.annotations[
+                      this.dataManager.currentFile
+                    ].splice(indexToDelete, 1);
+                    this.reRender();
+                  }
+                } else if (event.button === 2) {
+                  // Right mouse button: adds negative annotations
+                  if (this.annotationMode === "point") {
+                    this.dataManager.addPoint(
+                      (event.offsetX - this.canvasState.translateX) /
+                        this.canvasState.scale,
+                      (event.offsetY - this.canvasState.translateY) /
+                        this.canvasState.scale,
+                      "negative"
+                    );
+                    this.reRender();
+                  } else if (this.annotationMode === "bbox") {
+                    // Cancels the bounding box drawing
+                    this.bboxStart = null;
+                    this.drawingBbox = false;
+                    this.canvasState.tmpCtx.clearRect(
+                      0,
+                      0,
+                      this.canvasState.tmpCanvas.width,
+                      this.canvasState.tmpCanvas.height
+                    );
+                  }
+                }
+                this.clicking = false;
+              }
+            }
+          );
+
+          // Stops dragging when the mouse is released anywhere
+          window.addEventListener("mouseup", (event) => {
+            if (event.button === 0) {
+              this.dragging = false;
+            }
+          });
+
+          // Handles zooming with the mouse wheel
+          this.canvasState.crosshairCanvas.addEventListener(
+            "wheel",
+            (event) => {
+              event.preventDefault();
+              const zoomSpeed = 0.1;
+              const delta = -Math.sign(event.deltaY) * zoomSpeed;
+              const zoomFactor = Math.exp(delta);
+              this.canvasState.scale *= zoomFactor;
+
+              this.canvasState.translateX =
+                (this.canvasState.translateX - event.offsetX) * zoomFactor +
+                event.offsetX;
+              this.canvasState.translateY =
+                (this.canvasState.translateY - event.offsetY) * zoomFactor +
+                event.offsetY;
+              this.reRender();
+            }
+          );
+        }
+
+        // Placeholder for finding an annotation index (to be implemented)
+        getAnnotationIndex(x, y) {
+          return -1;
+        }
+
+        // Re-renders the canvas with current annotations and settings
+        reRender() {
+          this.canvasState.renderAll(
+            this.dataManager.annotations,
+            this.dataManager.currentFile,
+            this.dataManager.currentImage,
+            this.dataManager.maskImage
+          );
+        }
+      }
+
+      // Utility function to debounce frequent function calls
+      function debounce(fn, delay) {
+        let timeout;
+        return function (...args) {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => fn(...args), delay);
+        };
+      }
+
+      class ButtonManager {
+        constructor(dataManager, canvasState, annotationManager) {
+          this.dataManager = dataManager; // Manages image and annotation data
+          this.canvasState = canvasState; // Controls canvas rendering and interactions
+          this.annotationManager = annotationManager; // Manages annotation modes and events
+
+          // Initialize DOM elements for buttons and inputs
+          this.selectFolderButton =
+            document.getElementById("selectFolderButton");
+          this.folderInput = document.getElementById("folderInput");
+          this.loadAnnotationsButton = document.getElementById(
+            "loadAnnotationsButton"
+          );
+          this.loadFileInput = document.getElementById("loadFileInput");
+          this.prevButton = document.getElementById("prevButton");
+          this.nextButton = document.getElementById("nextButton");
+          this.toggleModeButton = document.getElementById("toggleModeButton");
+          this.resetViewButton = document.getElementById("resetViewButton");
+          this.clearButton = document.getElementById("clearButton");
+          this.undoButton = document.getElementById("undoButton");
+          this.downloadButton = document.getElementById("downloadButton");
+          this.helpModal = document.getElementById("helpModal");
+          this.helpButton = document.getElementById("helpButton");
+          this.modalCloseSpan = document.getElementsByClassName("close")[0];
+          this.privacyText = document.getElementById("privacy");
+        }
+
+        hideUnhide() {
+          // Hide initial selection elements and show main app controls
+          this.selectFolderButton.style.display = "none";
+          this.privacyText.style.display = "none";
+
+          // Unhide annotation and navigation controls
+          this.loadAnnotationsButton.classList.remove("hidden");
+          this.prevButton.classList.remove("hidden");
+          this.nextButton.classList.remove("hidden");
+          this.toggleModeButton.classList.remove("hidden");
+          this.resetViewButton.classList.remove("hidden");
+          this.clearButton.classList.remove("hidden");
+          this.undoButton.classList.remove("hidden");
+          this.downloadButton.classList.remove("hidden");
+          this.helpButton.classList.remove("hidden");
+
+          // Unhide canvas container and any extra canvas elements
+          this.canvasState.unhide();
+        }
+
+        setupEventHandlers() {
+          // Trigger folder input when the folder button is clicked
+          this.selectFolderButton.addEventListener("click", () => {
+            this.folderInput.click();
+          });
+
+          // Handle folder input changes, load files, and transition to main app
+          this.folderInput.addEventListener("change", async (event) => {
+            const numberOfFiles = await this.dataManager.loadFiles(event);
+            if (numberOfFiles > 0) {
+              this.hideUnhide();
+              this.canvasState.setupCanvases(
+                this.dataManager.annotations,
+                this.dataManager.currentFile,
+                this.dataManager.currentImage,
+                this.dataManager.maskImage
+              );
+              this.reRender();
+            } else {
+              alert("No images found in the selected folder.");
+            }
+          });
+
+          // Show help modal on clicking the help button
+          this.helpButton.addEventListener("click", () => {
+            this.helpModal.style.display = "block";
+          });
+
+          // Close the help modal when the close button is clicked
+          this.modalCloseSpan.addEventListener("click", () => {
+            this.helpModal.style.display = "none";
+          });
+
+          // Close the help modal if clicking outside of it
+          window.addEventListener("click", (event) => {
+            if (event.target === this.helpModal) {
+              this.helpModal.style.display = "none";
+            }
+          });
+
+          // Navigate images using keyboard shortcuts
+          document.addEventListener("keydown", (event) => {
+            if (!this.annotationManager.writingTextAnnotation) {
+              if (event.key === "a" || event.key === "ArrowLeft") {
+                this.prevButton.click();
+              } else if (event.key === "d" || event.key === "ArrowRight") {
+                this.nextButton.click();
+              }
+            }
+          });
+
+          // Navigate to the previous image
+          this.prevButton.addEventListener("click", async () => {
+            await this.dataManager.decrementDataIndex();
+            this.canvasState.setupCanvases(
+              this.dataManager.annotations,
+              this.dataManager.currentFile,
+              this.dataManager.currentImage,
+              this.dataManager.maskImage
+            );
+            this.reRender();
+          });
+
+          // Navigate to the next image
+          this.nextButton.addEventListener("click", async () => {
+            await this.dataManager.incrementDataIndex();
+            this.canvasState.setupCanvases(
+              this.dataManager.annotations,
+              this.dataManager.currentFile,
+              this.dataManager.currentImage,
+              this.dataManager.maskImage
+            );
+            this.reRender();
+          });
+
+          // Trigger file input for loading annotations
+          this.loadAnnotationsButton.addEventListener("click", () => {
+            this.loadFileInput.click();
+          });
+
+          // Load annotations and re-render canvas when a file is selected
+          this.loadFileInput.addEventListener("change", async (event) => {
+            await this.dataManager.loadAnnotations(event);
+            this.reRender();
+            this.loadFileInput.value = "";
+          });
+
+          // Toggle between point and bounding box annotation modes
+          this.toggleModeButton.addEventListener("click", () => {
+            if (this.annotationManager.annotationMode === "point") {
+              this.annotationManager.annotationMode = "bbox";
+              this.toggleModeButton.textContent = "Switch to Point Mode";
+            } else {
+              this.annotationManager.annotationMode = "point";
+              this.toggleModeButton.textContent = "Switch to Bounding Box Mode";
+            }
+          });
+
+          // Reset the canvas view to the default state
+          this.resetViewButton.addEventListener("click", () => {
+            this.canvasState.resetViewParams(this.dataManager.currentImage);
+            this.reRender();
+          });
+
+          // Clear all annotations for the current image
+          this.clearButton.addEventListener("click", () => {
+            this.dataManager.clearAnnotations();
+            this.reRender();
+          });
+
+          // Undo the last annotation with Ctrl+Z
+          document.addEventListener("keydown", (event) => {
+            if (event.ctrlKey && event.key === "z") {
+              this.undoButton.click();
+            }
+          });
+
+          // Undo the last annotation when undo button is clicked
+          this.undoButton.addEventListener("click", () => {
+            this.dataManager.undoLastAnnotation();
+            this.reRender();
+          });
+
+          // Download annotations as a JSON file
+          this.downloadButton.addEventListener("click", () => {
+            this.dataManager.downloadAnnotations();
+          });
+        }
+
+        reRender() {
+          this.canvasState.renderAll(
+            this.dataManager.annotations,
+            this.dataManager.currentFile,
+            this.dataManager.currentImage,
+            this.dataManager.maskImage
+          );
+        }
+      }
+
+      // Main application logic
+      document.addEventListener("DOMContentLoaded", () => {
+        const canvasState = new CanvasState();
+        const dataManager = new DataManager();
+        const annotationManager = new AnnotationManager(
+          dataManager,
+          canvasState
+        );
+        const buttonManager = new ButtonManager(
+          dataManager,
+          canvasState,
+          annotationManager
+        );
+        annotationManager.setupEventHandlers();
+        buttonManager.setupEventHandlers();
+      });
+    </script>
+  </body>
 </html>
