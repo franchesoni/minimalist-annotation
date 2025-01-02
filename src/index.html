@@ -337,6 +337,8 @@
         unhide() {
           this.imageTextAnnotationElement.classList.remove("hidden");
           this.canvasContainer.classList.remove("hidden");
+
+          this.extraCtx.imageSmoothingEnabled = false; // Prevent smoothing for sharp pixelation
         }
 
         // Initialize canvases with sizes matching the container and render content
@@ -733,10 +735,135 @@
       }
 
       class HitlUtils {
-        constructor() {
-          this.labeledFeatures = [];
+        constructor(k = 1) {
+          this.k = k;
+          this.vectors = [];
+          this.normVectorsTensor = null;
+          this.labels = [];
+          this.labelsTensor = null;
           this.featImage = null;
           this.feats = null;
+          this.normFeatsFlatTensor = null;
+          this.prediction = null;
+        }
+
+        async addPoint(xPct, yPct, label) {
+          if (!this.feats) {
+            alert(
+              "Please generate the features before clicking, now refresh the page"
+            );
+            return;
+          }
+          const col = Math.round(xPct * 37); // assume 518 side
+          const row = Math.round(yPct * 37);
+          const vector = this.feats
+            .slice([0, row, col], [384, 1, 1])
+            .reshape([384]);
+          this.vectors.push(vector);
+          this.labels.push(label);
+        }
+
+        async knnPredict() {
+          const P = this.vectors.length;
+          const D = 384;
+          const S = 37;
+          this.normVectorsTensor = tf.tensor2d(this.vectors); // (P, D)
+          this.labelsTensor = tf.tensor1d(this.labels, "int32");
+          this.normFeatsFlatTensor = tf.reshape(this.feats, [D, S * S]); // (D, HW)
+          // compute cosine distances
+          const l2NormVectors = tf.euclideanNorm(
+            this.normVectorsTensor,
+            (axis = 1),
+            (keepDims = true)
+          );
+          const l2NormFeats = tf.euclideanNorm(
+            this.normFeatsFlatTensor,
+            (axis = 0),
+            (keepDims = true)
+          );
+          const distances = tf
+            .matMul(
+              this.normVectorsTensor.div(l2NormVectors),
+              this.normFeatsFlatTensor.div(l2NormFeats)
+            )
+            .transpose(); // (HW, P)
+          // find nearest neighbors
+          const { kDists, kInds } = tf.topk(-distances, this.k); // (HW, k)
+          const kLabels = this.labelsTensor.gather(kInds); // (HW, k)
+          // probability is the mean
+          const kProbs = kLabels.mean(1); // (HW)
+          this.prediction = kProbs.reshape([S, S]);
+        }
+
+        resizeImageData(
+          img,
+          targetWidth,
+          targetHeight,
+          preserveAspectRatio = false
+        ) {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          if (!preserveAspectRatio) {
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+            return (
+              // canvas,
+              ctx.getImageData(0, 0, canvas.width, canvas.height)
+            );
+          } else {
+            const aspectRatio = img.width / img.height;
+            let width = targetWidth,
+              height = targetHeight;
+            if (aspectRatio > 1) height = targetWidth / aspectRatio;
+            else width = targetHeight * aspectRatio;
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+            return (
+              // canvas,
+              ctx.getImageData(0, 0, canvas.width, canvas.height)
+            );
+          }
+        }
+
+        getRgbData(feats) {
+          // Take first 3 channels.
+          let rgb = feats.slice([0, 0, 0], [3, 37, 37]);
+          // Normalize
+          let minVal = rgb.min();
+          let maxVal = rgb.max();
+          rgb = rgb
+            .sub(minVal)
+            .div(maxVal.sub(minVal))
+            .mul(255)
+            .clipByValue(0, 255)
+            .round()
+            .toInt();
+          // Move channel axis to last dimension [37,37,3].
+          rgb = rgb.transpose([1, 2, 0]);
+          const data = rgb.dataSync();
+          return { data, H: 37, W: 37 };
+        }
+
+        rgbDataToTempCanvas(data, H, W) {
+          const imageData = new ImageData(W, H);
+          let idx = 0;
+          for (let i = 0; i < data.length; i += 3) {
+            imageData.data[idx++] = data[i]; // Red
+            imageData.data[idx++] = data[i + 1]; // Green
+            imageData.data[idx++] = data[i + 2]; // Blue
+            imageData.data[idx++] = 255; // Alpha
+          }
+
+          // Draw the low-res image
+          const tempCanvas = document.createElement("canvas");
+          tempCanvas.width = W;
+          tempCanvas.height = H;
+          const tempCtx = tempCanvas.getContext("2d");
+          tempCtx.putImageData(imageData, 0, 0);
+
+          return tempCanvas;
         }
       }
 
@@ -858,12 +985,17 @@
                 if (event.button === 0) {
                   // Left mouse button: adds annotations
                   if (this.annotationMode === "point") {
-                    this.dataManager.addPoint(
+                    const imgX =
                       (event.offsetX - this.canvasState.translateX) /
-                        this.canvasState.scale,
+                      this.canvasState.scale;
+                    const imgY =
                       (event.offsetY - this.canvasState.translateY) /
-                        this.canvasState.scale,
-                      "positive"
+                      this.canvasState.scale;
+                    this.dataManager.addPoint(imgX, imgY, "positive");
+                    this.hitlUtils.addPoint(
+                      imgX / this.dataManager.currentImage.width,
+                      imgY / this.dataManager.currentImage.height,
+                      1
                     );
                     this.reRender();
                   } else if (this.annotationMode === "bbox") {
@@ -908,12 +1040,17 @@
                 } else if (event.button === 2) {
                   // Right mouse button: adds negative annotations
                   if (this.annotationMode === "point") {
-                    this.dataManager.addPoint(
+                    const imgX =
                       (event.offsetX - this.canvasState.translateX) /
-                        this.canvasState.scale,
+                      this.canvasState.scale;
+                    const imgY =
                       (event.offsetY - this.canvasState.translateY) /
-                        this.canvasState.scale,
-                      "negative"
+                      this.canvasState.scale;
+                    this.dataManager.addPoint(imgX, imgY, "negative");
+                    this.hitlUtils.addPoint(
+                      imgX / this.dataManager.currentImage.width,
+                      imgY / this.dataManager.currentImage.height,
+                      0
                     );
                     this.reRender();
                   } else if (this.annotationMode === "bbox") {
@@ -1166,7 +1303,7 @@
           // Run inference
           this.runButton.addEventListener("click", async () => {
             this.spinner.classList.remove("hidden");
-            await new Promise((resolve) => setTimeout(resolve, 0));  // needed to show spinner
+            await new Promise((resolve) => setTimeout(resolve, 0)); // needed to show spinner
             await this.runFeatureVisualization();
             this.spinner.classList.add("hidden");
           });
@@ -1191,17 +1328,10 @@
 
           // Resize image
           console.log("  - resizing image...");
-          const resizedImageCanvas = this.resizeImage(
+          const resizedImageData = this.hitlUtils.resizeImageData(
             this.dataManager.currentImage,
             518,
             518
-          );
-          const ctx = resizedImageCanvas.getContext("2d");
-          const resizedImageData = ctx.getImageData(
-            0,
-            0,
-            resizedImageCanvas.width,
-            resizedImageCanvas.height
           );
           const resizedTensor = await ort.Tensor.fromImage(resizedImageData);
 
@@ -1215,7 +1345,10 @@
           const feeds = { input0: resizedTensor };
           console.log("  - forward pass...");
           const results = await this.onnxSession.run(feeds);
-          this.hitlUtils.feats = await results["output0"].data;
+          this.hitlUtils.feats = tf.tensor(
+            await results["output0"].data,
+            [384, 37, 37]
+          );
 
           // Visualize
           console.log("  - visualizing...");
@@ -1223,73 +1356,10 @@
           console.log("Done!");
         }
 
-        resizeImage(
-          img,
-          targetWidth,
-          targetHeight,
-          preserveAspectRatio = false
-        ) {
-          const canvas = document.createElement("canvas");
-          const ctx = canvas.getContext("2d");
-          if (!preserveAspectRatio) {
-            canvas.width = targetWidth;
-            canvas.height = targetHeight;
-            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
-            return canvas;
-          } else {
-            const aspectRatio = img.width / img.height;
-            let width = targetWidth,
-              height = targetHeight;
-            if (aspectRatio > 1) height = targetWidth / aspectRatio;
-            else width = targetHeight * aspectRatio;
-            canvas.width = width;
-            canvas.height = height;
-            ctx.drawImage(img, 0, 0, width, height);
-            return canvas;
-          }
-        }
-
         visualizeFeature(feats) {
-          // feats is a flat array of shape (384*37*37).
-          // Convert to tf.Tensor, shape [384, 37, 37].
-          let tensor = tf.tensor(feats, [384, 37, 37]);
-          // Take first 3 channels.
-          let rgb = tensor.slice([0, 0, 0], [3, 37, 37]);
-          // Normalize
-          let minVal = rgb.min();
-          let maxVal = rgb.max();
-          rgb = rgb
-            .sub(minVal)
-            .div(maxVal.sub(minVal))
-            .mul(255)
-            .clipByValue(0, 255)
-            .round()
-            .toInt();
-          // Move channel axis to last dimension [37,37,3].
-          rgb = rgb.transpose([1, 2, 0]);
-          const data = rgb.dataSync();
-
-          const imageData = this.canvasState.extraCtx.createImageData(
-            rgb.shape[0],
-            rgb.shape[1]
-          );
-          let idx = 0;
-          for (let i = 0; i < data.length; i += 3) {
-            imageData.data[idx++] = data[i]; // Red
-            imageData.data[idx++] = data[i + 1]; // Green
-            imageData.data[idx++] = data[i + 2]; // Blue
-            imageData.data[idx++] = 255; // Alpha
-          }
-
-          // Draw the low-res image
-          const tempCanvas = document.createElement("canvas");
-          tempCanvas.width = rgb.shape[0];
-          tempCanvas.height = rgb.shape[1];
-          const tempCtx = tempCanvas.getContext("2d");
-          tempCtx.putImageData(imageData, 0, 0);
-
+          const { data, H, W } = this.hitlUtils.getRgbData(feats);
+          const tempCanvas = this.hitlUtils.rgbDataToTempCanvas(data, H, W);
           // Scale the image to higher resolution
-          this.canvasState.extraCtx.imageSmoothingEnabled = false; // Prevent smoothing for sharp pixelation
           this.canvasState.drawExtraCanvas(
             tempCanvas,
             this.dataManager.currentImage
