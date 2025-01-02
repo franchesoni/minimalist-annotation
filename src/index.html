@@ -761,25 +761,26 @@
             .reshape([384]);
           this.vectors.push(vector);
           this.labels.push(label);
+          this.knnPredict();
         }
 
         async knnPredict() {
           const P = this.vectors.length;
           const D = 384;
           const S = 37;
-          this.normVectorsTensor = tf.tensor2d(this.vectors); // (P, D)
-          this.labelsTensor = tf.tensor1d(this.labels, "int32");
+          this.normVectorsTensor = tf.stack(this.vectors); // (P, D)
+          this.labelsTensor = tf.tensor1d(this.labels);
           this.normFeatsFlatTensor = tf.reshape(this.feats, [D, S * S]); // (D, HW)
           // compute cosine distances
           const l2NormVectors = tf.euclideanNorm(
             this.normVectorsTensor,
-            (axis = 1),
-            (keepDims = true)
+            1, // axis
+            true // keepDims
           );
           const l2NormFeats = tf.euclideanNorm(
             this.normFeatsFlatTensor,
-            (axis = 0),
-            (keepDims = true)
+            0,
+            false
           );
           const distances = tf
             .matMul(
@@ -788,11 +789,17 @@
             )
             .transpose(); // (HW, P)
           // find nearest neighbors
-          const { kDists, kInds } = tf.topk(-distances, this.k); // (HW, k)
+          const kInds = tf.topk(distances.neg(), this.k)["indices"]; // (HW, k)
           const kLabels = this.labelsTensor.gather(kInds); // (HW, k)
           // probability is the mean
           const kProbs = kLabels.mean(1); // (HW)
           this.prediction = kProbs.reshape([S, S]);
+
+          // Draw the prediction on the extra canvas
+          let data = this.prediction.mul(255).clipByValue(0, 255).round().toInt();
+          data = data.dataSync();
+          const tempCanvas = this.grayDataToTempCanvas(data, 37, 37);
+          this.featImage = tempCanvas;
         }
 
         resizeImageData(
@@ -857,6 +864,28 @@
           }
 
           // Draw the low-res image
+          const tempCanvas = document.createElement("canvas");
+          tempCanvas.width = W;
+          tempCanvas.height = H;
+          const tempCtx = tempCanvas.getContext("2d");
+          tempCtx.putImageData(imageData, 0, 0);
+
+          return tempCanvas;
+        }
+
+        grayDataToTempCanvas(data, H, W) {
+          const imageData = new ImageData(W, H); // Create ImageData with width and height
+
+          let idx = 0;
+          for (let i = 0; i < data.length; i++) {
+            const grayValue = data[i]; // Grayscale value
+            imageData.data[idx++] = grayValue; // Red
+            imageData.data[idx++] = grayValue; // Green
+            imageData.data[idx++] = grayValue; // Blue
+            imageData.data[idx++] = 255; // Alpha (fully opaque)
+          }
+
+          // Draw the low-res grayscale image
           const tempCanvas = document.createElement("canvas");
           tempCanvas.width = W;
           tempCanvas.height = H;
@@ -992,11 +1021,15 @@
                       (event.offsetY - this.canvasState.translateY) /
                       this.canvasState.scale;
                     this.dataManager.addPoint(imgX, imgY, "positive");
-                    this.hitlUtils.addPoint(
-                      imgX / this.dataManager.currentImage.width,
-                      imgY / this.dataManager.currentImage.height,
-                      1
-                    );
+                    this.hitlUtils
+                      .addPoint(
+                        imgX / this.dataManager.currentImage.width,
+                        imgY / this.dataManager.currentImage.height,
+                        1
+                      )
+                      .then(() => {
+                        this.reRender();
+                      });
                     this.reRender();
                   } else if (this.annotationMode === "bbox") {
                     if (!this.bboxStart) {
@@ -1047,11 +1080,15 @@
                       (event.offsetY - this.canvasState.translateY) /
                       this.canvasState.scale;
                     this.dataManager.addPoint(imgX, imgY, "negative");
-                    this.hitlUtils.addPoint(
-                      imgX / this.dataManager.currentImage.width,
-                      imgY / this.dataManager.currentImage.height,
-                      0
-                    );
+                    this.hitlUtils
+                      .addPoint(
+                        imgX / this.dataManager.currentImage.width,
+                        imgY / this.dataManager.currentImage.height,
+                        0
+                      )
+                      .then(() => {
+                        this.reRender();
+                      });
                     this.reRender();
                   } else if (this.annotationMode === "bbox") {
                     // Cancels the bounding box drawing
@@ -1359,14 +1396,15 @@
         visualizeFeature(feats) {
           const { data, H, W } = this.hitlUtils.getRgbData(feats);
           const tempCanvas = this.hitlUtils.rgbDataToTempCanvas(data, H, W);
-          // Scale the image to higher resolution
-          this.canvasState.drawExtraCanvas(
-            tempCanvas,
-            this.dataManager.currentImage
-          );
+          this.hitlUtils.featImage = tempCanvas;
+          this.reRender();
+          // // Scale the image to higher resolution
+          // this.canvasState.drawExtraCanvas(
+          //   tempCanvas,
+          //   this.dataManager.currentImage
+          // );
           // this.canvasState.extraCtx.drawImage(tempCanvas, 0, 0, this.canvasState.extraCanvas.width, this.canvasState.extraCanvas.height);
           console.log("visualized!");
-          this.hitlUtils.featImage = tempCanvas;
         }
       }
 
