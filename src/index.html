@@ -551,7 +551,6 @@
           this.currentFile = null;
           this.currentImage = null;
           this.maskImage = null;
-          this.featImage = null;
         }
 
         async decrementDataIndex() {
@@ -733,10 +732,19 @@
         }
       }
 
+      class HitlUtils {
+        constructor() {
+          this.labeledFeatures = [];
+          this.featImage = null;
+          this.feats = null;
+        }
+      }
+
       class AnnotationManager {
-        constructor(dataManager, canvasState) {
+        constructor(dataManager, canvasState, hitlUtils) {
           this.dataManager = dataManager; // Handles annotation data and file management
           this.canvasState = canvasState; // Manages canvas rendering and interactions
+          this.hitlUtils = hitlUtils; // Handles HITL-specific utilities
           this.annotationMode = "point"; // Tracks the current annotation mode ("point" or "bbox")
           this.writingTextAnnotation = false; // Tracks whether a text annotation is being edited
           this.clicking = false; // Tracks if the mouse is clicking
@@ -965,7 +973,7 @@
             this.dataManager.currentFile,
             this.dataManager.currentImage,
             this.dataManager.maskImage,
-            this.dataManager.featImage
+            this.hitlUtils.featImage
           );
         }
       }
@@ -980,10 +988,11 @@
       }
 
       class ButtonManager {
-        constructor(dataManager, canvasState, annotationManager) {
+        constructor(dataManager, canvasState, annotationManager, hitlUtils) {
           this.dataManager = dataManager; // Manages image and annotation data
           this.canvasState = canvasState; // Controls canvas rendering and interactions
           this.annotationManager = annotationManager; // Manages annotation modes and events
+          this.hitlUtils = hitlUtils; // Handles HITL-specific utilities
 
           // Initialize DOM elements for buttons and inputs
           this.selectFolderButton =
@@ -1032,6 +1041,18 @@
           this.runButton.classList.remove("hidden");
         }
 
+        changeImage() {
+          this.hitlUtils.featImage = null;
+          this.canvasState.setupCanvases(
+            this.dataManager.annotations,
+            this.dataManager.currentFile,
+            this.dataManager.currentImage,
+            this.dataManager.maskImage,
+            this.hitlUtils.featImage
+          );
+          this.reRender();
+        }
+
         setupEventHandlers() {
           // Trigger folder input when the folder button is clicked
           this.selectFolderButton.addEventListener("click", () => {
@@ -1043,14 +1064,7 @@
             const numberOfFiles = await this.dataManager.loadFiles(event);
             if (numberOfFiles > 0) {
               this.hideUnhide();
-              this.canvasState.setupCanvases(
-                this.dataManager.annotations,
-                this.dataManager.currentFile,
-                this.dataManager.currentImage,
-                this.dataManager.maskImage,
-                this.dataManager.featImage
-              );
-              this.reRender();
+              this.changeImage();
             } else {
               alert("No images found in the selected folder.");
             }
@@ -1087,29 +1101,13 @@
           // Navigate to the previous image
           this.prevButton.addEventListener("click", async () => {
             await this.dataManager.decrementDataIndex();
-            this.dataManager.featImage = null;
-            this.canvasState.setupCanvases(
-              this.dataManager.annotations,
-              this.dataManager.currentFile,
-              this.dataManager.currentImage,
-              this.dataManager.maskImage,
-              this.dataManager.featImage
-            );
-            this.reRender();
+            this.changeImage();
           });
 
           // Navigate to the next image
           this.nextButton.addEventListener("click", async () => {
             await this.dataManager.incrementDataIndex();
-            this.dataManager.featImage = null;
-            this.canvasState.setupCanvases(
-              this.dataManager.annotations,
-              this.dataManager.currentFile,
-              this.dataManager.currentImage,
-              this.dataManager.maskImage,
-              this.dataManager.featImage
-            );
-            this.reRender();
+            this.changeImage();
           });
 
           // Trigger file input for loading annotations
@@ -1168,6 +1166,7 @@
           // Run inference
           this.runButton.addEventListener("click", async () => {
             this.spinner.classList.remove("hidden");
+            await new Promise((resolve) => setTimeout(resolve, 0));  // needed to show spinner
             await this.runFeatureVisualization();
             this.spinner.classList.add("hidden");
           });
@@ -1179,7 +1178,7 @@
             this.dataManager.currentFile,
             this.dataManager.currentImage,
             this.dataManager.maskImage,
-            this.dataManager.featImage
+            this.hitlUtils.featImage
           );
         }
 
@@ -1216,11 +1215,11 @@
           const feeds = { input0: resizedTensor };
           console.log("  - forward pass...");
           const results = await this.onnxSession.run(feeds);
-          const feats = await results["output0"].data;
+          this.hitlUtils.feats = await results["output0"].data;
 
           // Visualize
           console.log("  - visualizing...");
-          this.visualizeFeature(feats); // Use the provided function
+          this.visualizeFeature(this.hitlUtils.feats); // Use the provided function
           console.log("Done!");
         }
 
@@ -1297,7 +1296,7 @@
           );
           // this.canvasState.extraCtx.drawImage(tempCanvas, 0, 0, this.canvasState.extraCanvas.width, this.canvasState.extraCanvas.height);
           console.log("visualized!");
-          this.dataManager.featImage = tempCanvas;
+          this.hitlUtils.featImage = tempCanvas;
         }
       }
 
@@ -1305,14 +1304,17 @@
       document.addEventListener("DOMContentLoaded", () => {
         const canvasState = new CanvasState();
         const dataManager = new DataManager();
+        const hitlUtils = new HitlUtils();
         const annotationManager = new AnnotationManager(
           dataManager,
-          canvasState
+          canvasState,
+          hitlUtils
         );
         const buttonManager = new ButtonManager(
           dataManager,
           canvasState,
-          annotationManager
+          annotationManager,
+          hitlUtils
         );
         annotationManager.setupEventHandlers();
         buttonManager.setupEventHandlers();
