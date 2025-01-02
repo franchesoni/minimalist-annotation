@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <!-- ONNXRuntime Web -->
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+    <!-- TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- <link rel="stylesheet" href="styles.css" /> -->
@@ -133,9 +138,29 @@
         text-decoration: none;
         cursor: pointer;
       }
+
+      .loader {
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #555;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+
+        100% {
+          transform: rotate(360deg);
+        }
+      }
     </style>
   </head>
   <!-- We have an initial page with the selectFolderButton and some text -->
+
   <body>
     <div class="button-container">
       <button id="selectFolderButton" style="font-size: x-large">
@@ -193,6 +218,12 @@
       <label class="slider-label" for="alphaSlider">Mask Opacity:</label>
       <input type="range" id="alphaSlider" min="0" max="100" value="30" />
     </div>
+
+    <button id="runButton" class="hidden">RUN</button>
+    <div id="spinner" class="hidden">
+      <div class="loader"></div>
+    </div>
+
     <div id="extraCanvasContainer">
       <canvas id="extraCanvas"></canvas>
     </div>
@@ -309,7 +340,13 @@
         }
 
         // Initialize canvases with sizes matching the container and render content
-        setupCanvases(annotations, currentFile, currentImage, maskImage) {
+        setupCanvases(
+          annotations,
+          currentFile,
+          currentImage,
+          maskImage,
+          featImage
+        ) {
           this.imageCanvas.width =
             this.maskCanvas.width =
             this.annCanvas.width =
@@ -323,7 +360,13 @@
             this.crosshairCanvas.height =
               this.canvasContainer.clientHeight;
           this.resetViewParams(currentImage);
-          this.renderAll(annotations, currentFile, currentImage, maskImage);
+          this.renderAll(
+            annotations,
+            currentFile,
+            currentImage,
+            maskImage,
+            featImage
+          );
 
           // Set up the extra canvas
           this.extraCanvas.width = this.extraCanvasContainer.clientWidth;
@@ -374,7 +417,7 @@
           );
         }
 
-        drawExtraCanvas(currentImage) {
+        drawExtraCanvas(imgToDraw, currentImage) {
           this.extraCtx.clearRect(
             0,
             0,
@@ -382,13 +425,15 @@
             this.extraCanvas.height
           );
           this.applyClamping(currentImage);
-          this.extraCtx.drawImage(
-            currentImage,
-            this.translateX,
-            this.translateY,
-            currentImage.width * this.scale,
-            currentImage.height * this.scale
-          );
+          if (imgToDraw) {
+            this.extraCtx.drawImage(
+              imgToDraw,
+              this.translateX,
+              this.translateY,
+              currentImage.width * this.scale,
+              currentImage.height * this.scale
+            );
+          }
         }
 
         // Draw a crosshair on the canvas
@@ -421,7 +466,13 @@
         }
 
         // Render all canvases, annotations, and optional mask
-        renderAll(annotations, currentFile, currentImage, maskImage) {
+        renderAll(
+          annotations,
+          currentFile,
+          currentImage,
+          maskImage,
+          featImage
+        ) {
           this.annCtx.clearRect(
             0,
             0,
@@ -487,7 +538,7 @@
             this.imageTextAnnotationElement.value = "";
           }
 
-          this.drawExtraCanvas(currentImage);
+          this.drawExtraCanvas(featImage, currentImage);
         }
       }
 
@@ -500,6 +551,7 @@
           this.currentFile = null;
           this.currentImage = null;
           this.maskImage = null;
+          this.featImage = null;
         }
 
         async decrementDataIndex() {
@@ -912,7 +964,8 @@
             this.dataManager.annotations,
             this.dataManager.currentFile,
             this.dataManager.currentImage,
-            this.dataManager.maskImage
+            this.dataManager.maskImage,
+            this.dataManager.featImage
           );
         }
       }
@@ -951,6 +1004,10 @@
           this.helpButton = document.getElementById("helpButton");
           this.modalCloseSpan = document.getElementsByClassName("close")[0];
           this.privacyText = document.getElementById("privacy");
+
+          this.runButton = document.getElementById("runButton");
+          this.spinner = document.getElementById("spinner");
+          this.onnxSession = null;
         }
 
         hideUnhide() {
@@ -971,6 +1028,8 @@
 
           // Unhide canvas container and any extra canvas elements
           this.canvasState.unhide();
+
+          this.runButton.classList.remove("hidden");
         }
 
         setupEventHandlers() {
@@ -988,7 +1047,8 @@
                 this.dataManager.annotations,
                 this.dataManager.currentFile,
                 this.dataManager.currentImage,
-                this.dataManager.maskImage
+                this.dataManager.maskImage,
+                this.dataManager.featImage
               );
               this.reRender();
             } else {
@@ -1027,11 +1087,13 @@
           // Navigate to the previous image
           this.prevButton.addEventListener("click", async () => {
             await this.dataManager.decrementDataIndex();
+            this.dataManager.featImage = null;
             this.canvasState.setupCanvases(
               this.dataManager.annotations,
               this.dataManager.currentFile,
               this.dataManager.currentImage,
-              this.dataManager.maskImage
+              this.dataManager.maskImage,
+              this.dataManager.featImage
             );
             this.reRender();
           });
@@ -1039,11 +1101,13 @@
           // Navigate to the next image
           this.nextButton.addEventListener("click", async () => {
             await this.dataManager.incrementDataIndex();
+            this.dataManager.featImage = null;
             this.canvasState.setupCanvases(
               this.dataManager.annotations,
               this.dataManager.currentFile,
               this.dataManager.currentImage,
-              this.dataManager.maskImage
+              this.dataManager.maskImage,
+              this.dataManager.featImage
             );
             this.reRender();
           });
@@ -1100,6 +1164,13 @@
           this.downloadButton.addEventListener("click", () => {
             this.dataManager.downloadAnnotations();
           });
+
+          // Run inference
+          this.runButton.addEventListener("click", async () => {
+            this.spinner.classList.remove("hidden");
+            await this.runFeatureVisualization();
+            this.spinner.classList.add("hidden");
+          });
         }
 
         reRender() {
@@ -1107,8 +1178,126 @@
             this.dataManager.annotations,
             this.dataManager.currentFile,
             this.dataManager.currentImage,
-            this.dataManager.maskImage
+            this.dataManager.maskImage,
+            this.dataManager.featImage
           );
+        }
+
+        async runFeatureVisualization() {
+          console.log("Running feature visualization...");
+          if (!this.dataManager.currentImage) {
+            alert("No image loaded!");
+            return;
+          }
+
+          // Resize image
+          console.log("  - resizing image...");
+          const resizedImageCanvas = this.resizeImage(
+            this.dataManager.currentImage,
+            518,
+            518
+          );
+          const ctx = resizedImageCanvas.getContext("2d");
+          const resizedImageData = ctx.getImageData(
+            0,
+            0,
+            resizedImageCanvas.width,
+            resizedImageCanvas.height
+          );
+          const resizedTensor = await ort.Tensor.fromImage(resizedImageData);
+
+          // Run inference
+          if (!this.onnxSession) {
+            console.log("  - getting model...");
+            this.onnxSession = await ort.InferenceSession.create(
+              "http://127.0.0.1:8008/smalldino.onnx"
+            );
+          }
+          const feeds = { input0: resizedTensor };
+          console.log("  - forward pass...");
+          const results = await this.onnxSession.run(feeds);
+          const feats = await results["output0"].data;
+
+          // Visualize
+          console.log("  - visualizing...");
+          this.visualizeFeature(feats); // Use the provided function
+          console.log("Done!");
+        }
+
+        resizeImage(
+          img,
+          targetWidth,
+          targetHeight,
+          preserveAspectRatio = false
+        ) {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          if (!preserveAspectRatio) {
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+            return canvas;
+          } else {
+            const aspectRatio = img.width / img.height;
+            let width = targetWidth,
+              height = targetHeight;
+            if (aspectRatio > 1) height = targetWidth / aspectRatio;
+            else width = targetHeight * aspectRatio;
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+            return canvas;
+          }
+        }
+
+        visualizeFeature(feats) {
+          // feats is a flat array of shape (384*37*37).
+          // Convert to tf.Tensor, shape [384, 37, 37].
+          let tensor = tf.tensor(feats, [384, 37, 37]);
+          // Take first 3 channels.
+          let rgb = tensor.slice([0, 0, 0], [3, 37, 37]);
+          // Normalize
+          let minVal = rgb.min();
+          let maxVal = rgb.max();
+          rgb = rgb
+            .sub(minVal)
+            .div(maxVal.sub(minVal))
+            .mul(255)
+            .clipByValue(0, 255)
+            .round()
+            .toInt();
+          // Move channel axis to last dimension [37,37,3].
+          rgb = rgb.transpose([1, 2, 0]);
+          const data = rgb.dataSync();
+
+          const imageData = this.canvasState.extraCtx.createImageData(
+            rgb.shape[0],
+            rgb.shape[1]
+          );
+          let idx = 0;
+          for (let i = 0; i < data.length; i += 3) {
+            imageData.data[idx++] = data[i]; // Red
+            imageData.data[idx++] = data[i + 1]; // Green
+            imageData.data[idx++] = data[i + 2]; // Blue
+            imageData.data[idx++] = 255; // Alpha
+          }
+
+          // Draw the low-res image
+          const tempCanvas = document.createElement("canvas");
+          tempCanvas.width = rgb.shape[0];
+          tempCanvas.height = rgb.shape[1];
+          const tempCtx = tempCanvas.getContext("2d");
+          tempCtx.putImageData(imageData, 0, 0);
+
+          // Scale the image to higher resolution
+          this.canvasState.extraCtx.imageSmoothingEnabled = false; // Prevent smoothing for sharp pixelation
+          this.canvasState.drawExtraCanvas(
+            tempCanvas,
+            this.dataManager.currentImage
+          );
+          // this.canvasState.extraCtx.drawImage(tempCanvas, 0, 0, this.canvasState.extraCanvas.width, this.canvasState.extraCanvas.height);
+          console.log("visualized!");
+          this.dataManager.featImage = tempCanvas;
         }
       }
 
