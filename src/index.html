@@ -754,20 +754,34 @@
             );
             return;
           }
-          const col = Math.round(xPct * 37); // assume 518 side
-          const row = Math.round(yPct * 37);
+          // drgb
+          // const col = Math.round(xPct * 37); // assume 518 side
+          // const row = Math.round(yPct * 37);
+          // const vector = this.feats
+          //   .slice([0, row, col], [384, 1, 1])
+          //   .reshape([384]);
+
+          // drgb
+          const col = Math.round(xPct * 518); // assume 518 side
+          const row = Math.round(yPct * 518);
           const vector = this.feats
-            .slice([0, row, col], [384, 1, 1])
-            .reshape([384]);
+            .slice([0, row, col], [3, 1, 1])
+            .reshape([3]);
+
           this.vectors.push(vector);
           this.labels.push(label);
+
           this.knnPredict();
         }
 
         async knnPredict() {
           const P = this.vectors.length;
-          const D = 384;
-          const S = 37;
+          // drgb
+          // const D = 384;
+          // const S = 37;
+          const D = 3;
+          const S = 518;
+
           this.normVectorsTensor = tf.stack(this.vectors); // (P, D)
           this.labelsTensor = tf.tensor1d(this.labels);
           this.normFeatsFlatTensor = tf.reshape(this.feats, [D, S * S]); // (D, HW)
@@ -782,14 +796,14 @@
             0,
             false
           );
-          const distances = tf
+          const similarities = tf
             .matMul(
               this.normVectorsTensor.div(l2NormVectors),
               this.normFeatsFlatTensor.div(l2NormFeats)
             )
             .transpose(); // (HW, P)
           // find nearest neighbors
-          const kInds = tf.topk(distances.neg(), this.k)["indices"]; // (HW, k)
+          const kInds = tf.topk(similarities, this.k)["indices"]; // (HW, k)
           const kLabels = this.labelsTensor.gather(kInds); // (HW, k)
           // probability is the mean
           const kProbs = kLabels.mean(1); // (HW)
@@ -798,7 +812,7 @@
           // Draw the prediction on the extra canvas
           let data = this.prediction.mul(255).clipByValue(0, 255).round().toInt();
           data = data.dataSync();
-          const tempCanvas = this.grayDataToTempCanvas(data, 37, 37);
+          const tempCanvas = this.grayDataToTempCanvas(data, S, S);
           this.featImage = tempCanvas;
         }
 
@@ -836,7 +850,10 @@
 
         getRgbData(feats) {
           // Take first 3 channels.
-          let rgb = feats.slice([0, 0, 0], [3, 37, 37]);
+          // drgb
+          // let rgb = feats.slice([0, 0, 0], [3, 37, 37]);
+          let rgb = feats.slice([0, 0, 0], [3, 518, 518]);
+
           // Normalize
           let minVal = rgb.min();
           let maxVal = rgb.max();
@@ -850,7 +867,10 @@
           // Move channel axis to last dimension [37,37,3].
           rgb = rgb.transpose([1, 2, 0]);
           const data = rgb.dataSync();
-          return { data, H: 37, W: 37 };
+          // drgb
+          // return { data, H: 37, W: 37 };
+          return { data, H: 518, W: 518};
+
         }
 
         rgbDataToTempCanvas(data, H, W) {
@@ -1201,7 +1221,8 @@
           // Unhide annotation and navigation controls
           this.loadAnnotationsButton.classList.remove("hidden");
           this.prevButton.classList.remove("hidden");
-          this.nextButton.classList.remove("hidden");
+          // drgb
+          // this.nextButton.classList.remove("hidden");
           this.toggleModeButton.classList.remove("hidden");
           this.resetViewButton.classList.remove("hidden");
           this.clearButton.classList.remove("hidden");
@@ -1372,20 +1393,25 @@
           );
           const resizedTensor = await ort.Tensor.fromImage(resizedImageData);
 
-          // Run inference
-          if (!this.onnxSession) {
-            console.log("  - getting model...");
-            this.onnxSession = await ort.InferenceSession.create(
-              "http://127.0.0.1:8008/smalldino.onnx"
-            );
-          }
-          const feeds = { input0: resizedTensor };
-          console.log("  - forward pass...");
-          const results = await this.onnxSession.run(feeds);
+          // drgb
+          // // Run inference
+          // if (!this.onnxSession) {
+          //   console.log("  - getting model...");
+          //   this.onnxSession = await ort.InferenceSession.create(
+          //     "http://127.0.0.1:8008/smalldino.onnx"
+          //   );
+          // }
+          // const feeds = { input0: resizedTensor };
+          // console.log("  - forward pass...");
+          // const results = await this.onnxSession.run(feeds);
+          // this.hitlUtils.feats = tf.tensor(
+          //   await results["output0"].data,
+          //   [384, 37, 37]
+          // );
           this.hitlUtils.feats = tf.tensor(
-            await results["output0"].data,
-            [384, 37, 37]
-          );
+            resizedTensor.data, [3,518,518]
+          )
+          
 
           // Visualize
           console.log("  - visualizing...");
