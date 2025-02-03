@@ -553,6 +553,7 @@
           this.currentFile = null;
           this.currentImage = null;
           this.maskImage = null;
+          this.annotationCounter = 0;
         }
 
         async decrementDataIndex() {
@@ -646,11 +647,15 @@
         addPoint(x, y, type) {
           // Add a point annotation for the current file
           if (this.currentFile) {
-            this.annotations[this.currentFile].push({
+            const id = ++this.annotationCounter;  // unique id
+            const annotation = {
+              id,
               imgX: x,
               imgY: y,
-              type: type,
-            });
+              type,
+            };
+            this.annotations[this.currentFile].push(annotation);
+            return annotation;
           }
         }
 
@@ -745,9 +750,10 @@
           this.feats = null;
           this.normFeatsFlatTensor = null;
           this.prediction = null;
+          this.vectorIds = []; 
         }
 
-        async addPoint(xPct, yPct, label) {
+        async addPoint(xPct, yPct, label, id) {
           if (!this.feats) {
             alert(
               "Please generate the features before clicking, now refresh the page"
@@ -770,8 +776,18 @@
 
           this.vectors.push(vector);
           this.labels.push(label);
+          this.vectorIds.push(id);
 
           this.knnPredict();
+        }
+
+        removePointById(id) {
+          const index = this.vectorIds.indexOf(id);
+          if (index !== -1) {
+            this.vectorIds.splice(index, 1);
+            this.vectors.splice(index, 1);
+            this.labels.splice(index, 1);
+          }
         }
 
         async knnPredict() {
@@ -1040,12 +1056,13 @@
                     const imgY =
                       (event.offsetY - this.canvasState.translateY) /
                       this.canvasState.scale;
-                    this.dataManager.addPoint(imgX, imgY, "positive");
+                    const annotation = this.dataManager.addPoint(imgX, imgY, "positive");
                     this.hitlUtils
                       .addPoint(
                         imgX / this.dataManager.currentImage.width,
                         imgY / this.dataManager.currentImage.height,
-                        1
+                        1,
+                        annotation.id,
                       )
                       .then(() => {
                         this.reRender();
@@ -1099,12 +1116,13 @@
                     const imgY =
                       (event.offsetY - this.canvasState.translateY) /
                       this.canvasState.scale;
-                    this.dataManager.addPoint(imgX, imgY, "negative");
+                    const annotation = this.dataManager.addPoint(imgX, imgY, "negative");
                     this.hitlUtils
                       .addPoint(
                         imgX / this.dataManager.currentImage.width,
                         imgY / this.dataManager.currentImage.height,
-                        0
+                        0,
+                        annotation.id
                       )
                       .then(() => {
                         this.reRender();
@@ -1336,6 +1354,16 @@
 
           // Clear all annotations for the current image
           this.clearButton.addEventListener("click", () => {
+            const currentFile = this.dataManager.currentFile;
+            const annotations = this.dataManager.annotations[currentFile] || [];
+            annotations.forEach(ann => {
+              if (ann.type === "positive" || ann.type === "negative") {
+                this.hitlUtils.removePointById(ann.id);
+              }
+              if (this.hitlUtils.vectorIds.length === 0) {  // reset feature view
+                this.visualizeFeature(this.hitlUtils.feats); 
+              }
+            });
             this.dataManager.clearAnnotations();
             this.reRender();
           });
@@ -1349,6 +1377,18 @@
 
           // Undo the last annotation when undo button is clicked
           this.undoButton.addEventListener("click", () => {
+            const currentFile = this.dataManager.currentFile;
+            const annotations = this.dataManager.annotations[currentFile] || [];
+            if (annotations.length > 0) {
+              const lastAnn = annotations[annotations.length - 1];
+              // Only remove the KNN vector if it’s a point annotation.
+              if (lastAnn.type === "positive" || lastAnn.type === "negative") {
+                this.hitlUtils.removePointById(lastAnn.id);
+              }
+              if (this.hitlUtils.vectorIds.length === 0) {  // reset feature view
+                this.visualizeFeature(this.hitlUtils.feats); 
+              }
+            }
             this.dataManager.undoLastAnnotation();
             this.reRender();
           });
