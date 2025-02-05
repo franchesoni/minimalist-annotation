@@ -919,6 +919,18 @@
 
         return tempCanvas;
       }
+
+      setFeatsAsFeatImage(feats) {
+        const { data, H, W } = this.getRgbData(feats);
+        const tempCanvas = this.rgbDataToTempCanvas(data, H, W);
+        this.featImage = tempCanvas;
+        // // Scale the image to higher resolution
+        // this.canvasState.drawExtraCanvas(
+        //   tempCanvas,
+        //   this.dataManager.currentImage
+        // );
+        // this.canvasState.extraCtx.drawImage(tempCanvas, 0, 0, this.canvasState.extraCanvas.width, this.canvasState.extraCanvas.height);
+      }
     }
 
     class AnnotationManager {
@@ -1342,6 +1354,7 @@
 
         // Clear all annotations for the current image
         this.clearButton.addEventListener("click", () => {
+          // clear annotations for HITL
           const currentFile = this.dataManager.currentFile;
           const annotations = this.dataManager.annotations[currentFile] || [];
           annotations.forEach(ann => {
@@ -1349,9 +1362,12 @@
               this.hitlUtils.removePointById(ann.id);
             }
             if (this.hitlUtils.vectorIds.length === 0) {  // reset feature view
-              this.visualizeFeature(this.hitlUtils.feats);
+              this.hitlUtils.setFeatsAsFeatImage(this.hitlUtils.feats);
+            } else {
+              this.hitlUtils.knnPredict();
             }
           });
+          // clear annotations for annotation tool
           this.dataManager.clearAnnotations();
           this.reRender();
         });
@@ -1365,6 +1381,7 @@
 
         // Undo the last annotation when undo button is clicked
         this.undoButton.addEventListener("click", () => {
+          // undo last annotation for HITL
           const currentFile = this.dataManager.currentFile;
           const annotations = this.dataManager.annotations[currentFile] || [];
           if (annotations.length > 0) {
@@ -1374,9 +1391,12 @@
               this.hitlUtils.removePointById(lastAnn.id);
             }
             if (this.hitlUtils.vectorIds.length === 0) {  // reset feature view
-              this.visualizeFeature(this.hitlUtils.feats);
+              this.hitlUtils.setFeatsAsFeatImage(this.hitlUtils.feats);
+            } else {
+              this.hitlUtils.knnPredict();
             }
           }
+          // undo last annotation for annotation tool
           this.dataManager.undoLastAnnotation();
           this.reRender();
         });
@@ -1443,23 +1463,16 @@
 
         // Visualize
         console.log("  - visualizing...");
-        this.visualizeFeature(this.hitlUtils.feats); // Use the provided function
+        if (this.hitlUtils.vectorIds.length === 0) {
+          this.hitlUtils.setFeatsAsFeatImage(this.hitlUtils.feats); // Use the provided function
+        } else {
+          this.hitlUtils.knnPredict();
+        }
+        this.reRender();
         console.log("Done!");
       }
 
-      visualizeFeature(feats) {
-        const { data, H, W } = this.hitlUtils.getRgbData(feats);
-        const tempCanvas = this.hitlUtils.rgbDataToTempCanvas(data, H, W);
-        this.hitlUtils.featImage = tempCanvas;
-        this.reRender();
-        // // Scale the image to higher resolution
-        // this.canvasState.drawExtraCanvas(
-        //   tempCanvas,
-        //   this.dataManager.currentImage
-        // );
-        // this.canvasState.extraCtx.drawImage(tempCanvas, 0, 0, this.canvasState.extraCanvas.width, this.canvasState.extraCanvas.height);
-        console.log("visualized!");
-      }
+
     }
 
     // Main application logic
