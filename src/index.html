@@ -278,7 +278,7 @@
   </div>
 
   <script>
-    const USE_RGB = true;
+    const USE_RGB = false;
 
     class CanvasState {
       constructor() {
@@ -1457,8 +1457,9 @@
           // Run inference
           if (!this.onnxSession) {
             console.log("  - getting model...");
+            const modelUrl = `${window.location.origin}/smalldino.onnx`;
             this.onnxSession = await ort.InferenceSession.create(
-              "http://127.0.0.1:8008/smalldino.onnx"
+              modelUrl
             );
           }
           const feeds = { input0: resizedTensor };
