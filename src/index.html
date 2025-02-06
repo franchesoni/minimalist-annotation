@@ -747,8 +747,9 @@
       async addPoint(xPct, yPct, label, id) {
         if (!this.feats) {
           alert(
-            "Please generate the features before clicking, now refresh the page"
+            "Please generate the features before clicking, I'll refresh the page"
           );
+          location.reload();
           return;
         }
         let col, row, vector
@@ -1265,6 +1266,7 @@
       }
 
       changeImage() {
+        this.hitlUtils.feats = null;
         this.hitlUtils.featImage = null;
         this.canvasState.setupCanvases(
           this.dataManager.annotations,
