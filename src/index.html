@@ -1423,7 +1423,6 @@
           this.spinner.classList.remove("hidden");
           await new Promise((resolve) => setTimeout(resolve, 0)); // needed to show spinner
           await this.runFeatureVisualization();
-          this.spinner.classList.add("hidden");
         });
       }
 
@@ -1452,39 +1451,34 @@
           518
         );
         const resizedTensor = await ort.Tensor.fromImage(resizedImageData);
+        const worker = new Worker("onnxWorker.js");
 
-        if (!USE_RGB) {
-          // Run inference
-          if (!this.onnxSession) {
-            console.log("  - getting model...");
-            const modelUrl = `${window.location.origin}/smalldino.onnx`;
-            this.onnxSession = await ort.InferenceSession.create(
-              modelUrl
-            );
+        worker.onmessage = (e) => {
+          if (e.data.error) {
+            console.error("Worker error:", e.data.error);
+            alert("Error during inference: " + e.data.error);
+            this.spinner.classList.add("hidden");
+            return;
           }
-          const feeds = { input0: resizedTensor };
-          console.log("  - forward pass...");
-          const results = await this.onnxSession.run(feeds);
-          this.hitlUtils.feats = tf.tensor(
-            await results["output0"].data,
-            [384, 37, 37]
-          );
-        } else {
-          this.hitlUtils.feats = tf.tensor(
-            resizedTensor.data, [3, 518, 518]
-          )
-        }
+          console.log("Worker response received");
+          
+          // Decide shape based on USE_RGB flag
+          const shape = USE_RGB ? [3, 518, 518] : [384, 37, 37];
 
+          // Convert received buffer to tensor
+          this.hitlUtils.feats = tf.tensor(new Float32Array(e.data.feats), shape);
 
-        // Visualize
-        console.log("  - visualizing...");
-        if (this.hitlUtils.vectorIds.length === 0) {
-          this.hitlUtils.setFeatsAsFeatImage(this.hitlUtils.feats); // Use the provided function
-        } else {
-          this.hitlUtils.knnPredict();
-        }
-        this.reRender();
-        console.log("Done!");
+          // Visualize
+          if (this.hitlUtils.vectorIds.length === 0) {
+            this.hitlUtils.setFeatsAsFeatImage(this.hitlUtils.feats);
+          } else {
+            this.hitlUtils.knnPredict();
+          }
+          this.reRender();
+          this.spinner.classList.add("hidden");
+        };
+
+        worker.postMessage({ tensorData: resizedTensor.data.buffer, dims: resizedTensor.dims}, [resizedTensor.data.buffer]);
       }
 
 
