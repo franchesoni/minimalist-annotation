@@ -1,189 +1,101 @@
 <html>
-
-<head>
-    <!-- ONNXRuntime Web -->
+  <head>
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
-    <!-- TensorFlow.js -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-</head>
-
-<body>
-
-
+  </head>
+  <body>
     <h1>Example</h1>
-    <div>
-        <input title="Image from File" type="file" id="file-in" name="file-in">
-    </div>
-    <h3>Image from file</h3>
-    <div>
-        <img id="original-image" src="#" />
-    </div>
-    <!-- <h3>Image from tensor</h3> -->
-    <canvas id="canvasHTMLElement" style="display:none"></canvas>
-    <!-- <h3>Image from tensor resized</h3> -->
-    <canvas id="canvasHTMLElementResize" style="display:none"></canvas>
-    <!-- <h3>Image from tensor (ImageData)</h3> -->
-    <canvas id="canvasImageData" style="display:none"></canvas>
+    <input type="file" id="file-in">
+    <img id="original-image" style="display:none">
     <button id="run-button">RUN</button>
     <div id="mouse-coords">Move your mouse</div>
-</body>
-<script>
-    const canvasHTML = document.getElementById('canvasHTMLElement');
-    const canvasResize = document.getElementById('canvasHTMLElementResize');
-    const canvasImageData = document.getElementById('canvasImageData');
+    <script>
+      // Create worker from external file
+      const worker = new Worker('worker.js');
+      worker.onmessage = e => {
+        if (e.data.error) return console.error("Worker reported:", e.data.error);
+        const feats = new Float32Array(e.data.feats);
+        console.log("Main: Received results from worker.");
+        visualizeFeature(feats);
+      };
 
-    function resizeImage(img, targetWidth, targetHeight) {
+      function resizeImage(img, targetWidth, targetHeight) {
         const canvas = document.createElement('canvas');
         canvas.width = targetWidth; canvas.height = targetHeight;
-        const ctx = canvas.getContext('2d');
-        // const aspectRatio = img.width / img.height;
-        // let width = targetWidth, height = targetHeight;
-        // if (aspectRatio > 1) height = targetWidth / aspectRatio;
-        // else width = targetHeight * aspectRatio;
-        // canvas.width = width; canvas.height = height;
-        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+        canvas.getContext('2d').drawImage(img, 0, 0, targetWidth, targetHeight);
         return canvas;
-    }
+      }
 
-    async function handleImage(img) {
-        const resizedImageCanvas = resizeImage(img, 518, 518);
-        const ctx = resizedImageCanvas.getContext('2d');
-        const resizedImageData = ctx.getImageData(0, 0, resizedImageCanvas.width, resizedImageCanvas.height);
+      async function handleImage(img) {
+        const resizedCanvas = resizeImage(img, 518, 518);
+        const ctx = resizedCanvas.getContext('2d');
+        const imageData = ctx.getImageData(0, 0, resizedCanvas.width, resizedCanvas.height);
+        const resizedTensor = await ort.Tensor.fromImage(imageData);
+        console.log("Main: Sending tensor to worker...");
+        worker.postMessage({
+          tensorData: resizedTensor.data.buffer,
+          dims: resizedTensor.dims
+        }, [resizedTensor.data.buffer]);
+      }
 
-        const htmlTensor = await ort.Tensor.fromImage(img);
-        const resizedTensor = await ort.Tensor.fromImage(resizedImageData);
-        // const imageHTML = htmlTensor.toImageData();
-        // const resizeImageData = resizedTensor.toImageData();
-        // const imageDataTensor = await ort.Tensor.fromImage(imageHTML);
-        // const imageImageData = imageDataTensor.toImageData();
-
-        // canvasHTML.width = imageHTML.width; canvasHTML.height = imageHTML.height;
-        // let context = canvasHTML.getContext('2d');
-        // context.putImageData(imageHTML, 0, 0);
-
-        // canvasResize.width = resizeImageData.width; canvasResize.height = resizeImageData.height;
-        // context = canvasResize.getContext('2d');
-        // context.putImageData(resizeImageData, 0, 0);
-
-        // canvasImageData.width = imageImageData.width; canvasImageData.height = imageImageData.height;
-        // context = canvasImageData.getContext('2d');
-        // context.putImageData(imageImageData, 0, 0);
-
-        console.log('downloading smalldino...');
-        // session = await ort.InferenceSession.create('https://huggingface.co/franchesoni/hitl-segmentation/resolve/main/smalldino.onnx');
-        // session = await ort.InferenceSession.create('http://127.0.0.1:8008/smalldino.onnx');
-        const modelUrl = `${window.location.origin}/smalldino.onnx`;
-        session = await ort.InferenceSession.create(
-            modelUrl
-        );
-        console.log("predicting...");
-        const feeds = { input0: resizedTensor };
-        const results = await session.run(feeds);
-        let feats = await results['output0'].data;
-        console.log("visualizing...");
-        visualizeFeature(feats);
-    }
-
-    function visualizeFeature(feats) {
-        // feats is a flat array of shape (384*37*37).
-        // Convert to tf.Tensor, shape [384, 37, 37].
-        let tensor = tf.tensor(feats, [384, 37, 37]);
-        // Take first 3 channels.
-        let rgb = tensor.slice([0, 0, 0], [3, 37, 37]);
-        // Normalize
-        let minVal = rgb.min();
-        let maxVal = rgb.max();
-        rgb = rgb.sub(minVal).div(maxVal.sub(minVal)).mul(255).clipByValue(0, 255).round().toInt();
-        // Move channel axis to last dimension [37,37,3].
-        rgb = rgb.transpose([1, 2, 0]);
-        const data = rgb.dataSync();
-        // Define scaling factor
-        const scaleFactor = 10;
-        const newWidth = rgb.shape[0] * scaleFactor;
-        const newHeight = rgb.shape[1] * scaleFactor;
-
-        // Create canvas for high-res visualization
+      function visualizeFeature(feats) {
+        const tensor = tf.tensor(feats, [384, 37, 37]);
+        let rgb = tensor.slice([0, 0, 0], [3, 37, 37])
+                        .transpose([1,2,0])
+                        .sub(tensor.min())
+                        .div(tensor.max().sub(tensor.min()))
+                        .mul(255)
+                        .round()
+                        .toInt();
+        const data = rgb.dataSync(), scale = 10;
         const canvas = document.createElement('canvas');
         document.body.appendChild(canvas);
-        canvas.width = newWidth;
-        canvas.height = newHeight;
+        canvas.width = rgb.shape[0] * scale;
+        canvas.height = rgb.shape[1] * scale;
         const ctx = canvas.getContext('2d');
-        const imageData = ctx.createImageData(rgb.shape[0], rgb.shape[1]);
-        let idx = 0;
-        for (let i = 0; i < data.length; i += 3) {
-            imageData.data[idx++] = data[i];     // Red
-            imageData.data[idx++] = data[i + 1]; // Green
-            imageData.data[idx++] = data[i + 2]; // Blue
-            imageData.data[idx++] = 255;        // Alpha
+        const imgData = ctx.createImageData(rgb.shape[0], rgb.shape[1]);
+        for (let i = 0, j = 0; i < data.length; i += 3) {
+          imgData.data[j++] = data[i];
+          imgData.data[j++] = data[i+1];
+          imgData.data[j++] = data[i+2];
+          imgData.data[j++] = 255;
         }
+        // Draw low-res image then scale up without smoothing.
+        const tmp = document.createElement('canvas');
+        tmp.width = rgb.shape[0]; tmp.height = rgb.shape[1];
+        tmp.getContext('2d').putImageData(imgData, 0, 0);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(tmp, 0, 0, canvas.width, canvas.height);
+        console.log('Visualized!');
+      }
 
-        // Draw the low-res image
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = rgb.shape[0];
-        tempCanvas.height = rgb.shape[1];
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.putImageData(imageData, 0, 0);
+      let loadedImage = null;
+      function loadImage(fileReader) {
+        const img = document.getElementById("original-image");
+        img.onload = () => {
+          loadedImage = img;
+          console.log("Image loaded. Press RUN.");
+        };
+        img.src = fileReader.result;
+      }
 
-        // Scale the image to higher resolution
-        ctx.imageSmoothingEnabled = false; // Prevent smoothing for sharp pixelation
-        ctx.drawImage(tempCanvas, 0, 0, newWidth, newHeight);
-        console.log('visualized!')
-    }
-
-
-    let loadedImage = null;
-
-    // On file load, just store the image.
-    function loadImage(fileReader) {
-    const img = document.getElementById("original-image");
-    img.onload = () => {
-        loadedImage = img;
-        console.log("Image loaded. Press RUN.");
-    };
-    img.src = fileReader.result;
-    }
-
-    // RUN button triggers feature extraction.
-    document.getElementById("run-button").addEventListener("click", async () => {
-    if (!loadedImage) return console.error("No image loaded");
-    await handleImage(loadedImage);
-    });
-
-    // Example: live mouse coordinates to show UI responsiveness.
-    document.addEventListener("mousemove", e => {
-    document.getElementById("mouse-coords").textContent = `X: ${e.clientX}, Y: ${e.clientY}`;
-    });
-
-    // existing main() now only sets up file input.
-    function main() {
-    document.getElementById("file-in").onchange = evt => {
+      document.getElementById("file-in").onchange = evt => {
         const files = evt.target.files;
-        if (FileReader && files && files.length) {
-        const fileReader = new FileReader();
-        fileReader.onload = () => loadImage(fileReader);
-        fileReader.readAsDataURL(files[0]);
+        if (files && files.length) {
+          const reader = new FileReader();
+          reader.onload = () => loadImage(reader);
+          reader.readAsDataURL(files[0]);
         }
-    };
-    }
+      };
 
-    // function loadImage(fileReader) {
-    //     const img = document.getElementById("original-image");
-    //     img.onload = () => handleImage(img);
-    //     img.src = fileReader.result;
-    // }
+      document.getElementById("run-button").addEventListener("click", async () => {
+        if (!loadedImage) return console.error("No image loaded");
+        await handleImage(loadedImage);
+      });
 
-    // function main() {
-    //     document.getElementById("file-in").onchange = evt => {
-    //         const files = evt.target.files;
-    //         if (FileReader && files && files.length) {
-    //             const fileReader = new FileReader();
-    //             fileReader.onload = () => loadImage(fileReader);
-    //             fileReader.readAsDataURL(files[0]);
-    //         }
-    //     };
-    // }
-
-    main();
-</script>
-
+      document.addEventListener("mousemove", e => {
+        document.getElementById("mouse-coords").textContent = `X: ${e.clientX}, Y: ${e.clientY}`;
+      });
+    </script>
+  </body>
 </html>
