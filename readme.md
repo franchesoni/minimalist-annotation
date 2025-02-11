@@ -90,3 +90,20 @@ Open an issue in the repository or contact [Franco Marchesoni](mailto:marchesoni
 - add transparency slider for mask visualization
 - allow to flag masks as correct
 
+# done
+- fix: go next and back, the mask disappears, need to press run again, the mask is not shown
+- fix: find out why the mask on different images is not what it should be <- black and white images don't work for rgb mode (cosine distance) 
+- fix USE_RGB switch <- haven't tried dino
+- fix clicking on an image, going to another and clicking (should raise)
+- try dino
+
+# new roadmap
+- hitl dino, sync webworker with annotation tool (single image)
+    - there are three cases for annotation addition / removal: before starting computing the feature map (should never happen, as feature map computation should start as soon as the image is loaded or before), during the computation, or after it. For after the computation, we have the code. We need to add the code for during the computation. Basically when a computation is done, we should look at the annotations and create the vectors accordingly (function "updateVectors"). Then whenever an annotation is added / removed we rerun the "updateVectors". This function should look at the annotations included so far, remove any extra, and see if we can include some that were not included given the feature maps available. Whenever a feature map is computed or annotations are modified we updateVectors. Then we have feature map computation which has a queue and can be stopped if the queue is modified, but this is more complex and comes later. 
+    - in short, create updateVectors function that will run whenever annotations are updated or whenever a feature map is computed
+- hitl dino, sync webworker with annotation tool (many images)
+- hitl dino, model download
+- hitl dino, visualization
+- hitl dino, mask download
+- hitl dino, prefetching
+
