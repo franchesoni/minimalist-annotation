@@ -653,7 +653,9 @@
       addBoundingBox(start, end) {
         // Add a bounding box annotation for the current file
         if (this.currentFile) {
+          const id = ++this.annotationCounter;  // unique id
           const bbox = {
+            id,
             x1: Math.min(start.x, end.x),
             y1: Math.min(start.y, end.y),
             x2: Math.max(start.x, end.x),
@@ -1183,11 +1185,6 @@
             this.reRender();
           }
         );
-      }
-
-      // Placeholder for finding an annotation index (to be implemented)
-      getAnnotationIndex(x, y) {
-        return -1;
       }
 
       // Re-renders the canvas with current annotations and settings
