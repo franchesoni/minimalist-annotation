@@ -779,7 +779,7 @@
         }
 
         // Update predictions if needed
-        if (this.vectorIds.length > 0 && updated) {
+        if (this.vectorIds.length > 0) {
           await this.knnPredict();
         } else if (this.feats) {
           this.setFeatsAsFeatImage(this.feats);
@@ -1427,7 +1427,7 @@
         this.runButton.addEventListener("click", async () => {
           this.spinner.classList.remove("hidden");
           await new Promise((resolve) => setTimeout(resolve, 0)); // needed to show spinner
-          await this.runFeatureVisualization();
+          await this.computeFeatures();
         });
       }
 
@@ -1441,7 +1441,7 @@
         );
       }
 
-      async runFeatureVisualization() {
+      async computeFeatures() {
         console.log("Running feature visualization...");
         if (!this.dataManager.currentImage) {
           alert("No image loaded!");
