@@ -635,7 +635,7 @@
         downloadAnchorNode.remove();
       }
 
-      addPoint(x, y, type) {
+      addPoint(x, y, type, imgWidth, imgHeight) {
         // Add a point annotation for the current file
         if (this.currentFile) {
           const id = ++this.annotationCounter;  // unique id
@@ -644,6 +644,8 @@
             imgX: x,
             imgY: y,
             type,
+            imgWidth,
+            imgHeight,
           };
           this.annotations[this.currentFile].push(annotation);
           return annotation;
@@ -736,17 +738,58 @@
       constructor(k = 1) {
         this.k = k;
         this.vectors = [];
-        this.normVectorsTensor = null;
         this.labels = [];
-        this.labelsTensor = null;
         this.featImage = null;
         this.feats = null;
-        this.normFeatsFlatTensor = null;
-        this.prediction = null;
         this.vectorIds = [];
       }
 
+      async updateVectors(annotationsDict) {
+        console.log("Updating vectors");
+        let updated = false;
+        const vectorsIdWithoutAnn = new Set(this.vectorIds);
+
+        // Iterate over all annotation lists in the dictionary
+        for (const [filename, annotations] of Object.entries(annotationsDict)) {
+          // Process annotations in reverse order (last annotations are usually more important)
+          for (let i = annotations.length - 1; i >= 0; i--) {
+            const ann = annotations[i];
+            if (ann.type === 'positive' || ann.type === 'negative') {
+
+              if (!this.vectorIds.includes(ann.id)) {
+                if (this.feats) {
+                  await this.addPoint(
+                    ann.imgX / ann.imgWidth,
+                    ann.imgY / ann.imgHeight,
+                    ann.type === 'positive' ? 1 : 0,
+                    ann.id
+                  );
+                  updated = true;
+                }
+              }
+              vectorsIdWithoutAnn.delete(ann.id); // Remove from check list
+            }
+          }
+        }
+
+        // Remove any vectors that no longer have corresponding annotations
+        for (const annId of vectorsIdWithoutAnn) {
+          this.removePointById(annId);
+          updated = true;
+        }
+
+        // Update predictions if needed
+        if (this.vectorIds.length > 0 && updated) {
+          await this.knnPredict();
+        } else if (this.feats) {
+          this.setFeatsAsFeatImage(this.feats);
+        }
+        console.log("Updated vectors");
+      }
+
+
       async addPoint(xPct, yPct, label, id) {
+        console.log('Adding point to HITL module');
         if (!this.feats) {
           alert(
             "Please generate the features before clicking, I'll refresh the page"
@@ -772,8 +815,7 @@
         this.vectors.push(vector);
         this.labels.push(label);
         this.vectorIds.push(id);
-
-        this.knnPredict();
+        console.log("Added point with id", id);
       }
 
       removePointById(id) {
@@ -786,6 +828,7 @@
       }
 
       async knnPredict() {
+        console.log("Predicting");
         const P = this.vectors.length;
         let D, S
         if (!USE_RGB) {
@@ -796,35 +839,35 @@
           S = 518;
         }
 
-        this.normVectorsTensor = tf.stack(this.vectors); // (P, D)
-        this.labelsTensor = tf.tensor1d(this.labels);
-        this.normFeatsFlatTensor = tf.reshape(this.feats, [D, S * S]); // (D, HW)
+        let normVectorsTensor = tf.stack(this.vectors); // (P, D)
+        let labelsTensor = tf.tensor1d(this.labels);
+        let normFeatsFlatTensor = tf.reshape(this.feats, [D, S * S]); // (D, HW)
         // compute cosine distances
         const l2NormVectors = tf.euclideanNorm(
-          this.normVectorsTensor,
+          normVectorsTensor,
           1, // axis
           true // keepDims
         );
         const l2NormFeats = tf.euclideanNorm(
-          this.normFeatsFlatTensor,
+          normFeatsFlatTensor,
           0,
           false
         );
         const similarities = tf
           .matMul(
-            this.normVectorsTensor.div(l2NormVectors),
-            this.normFeatsFlatTensor.div(l2NormFeats)
+            normVectorsTensor.div(l2NormVectors),
+            normFeatsFlatTensor.div(l2NormFeats)
           )
           .transpose(); // (HW, P)
         // find nearest neighbors
         const kInds = tf.topk(similarities, this.k)["indices"]; // (HW, k)
-        const kLabels = this.labelsTensor.gather(kInds); // (HW, k)
+        const kLabels = labelsTensor.gather(kInds); // (HW, k)
         // probability is the mean
         const kProbs = kLabels.mean(1); // (HW)
-        this.prediction = kProbs.reshape([S, S]);
+        let prediction = kProbs.reshape([S, S]);
 
         // Draw the prediction on the extra canvas
-        let data = this.prediction.mul(255).clipByValue(0, 255).round().toInt();
+        let data = prediction.mul(255).clipByValue(0, 255).round().toInt();
         data = data.dataSync();
         const tempCanvas = this.grayDataToTempCanvas(data, S, S);
         this.featImage = tempCanvas;
@@ -1070,17 +1113,10 @@
                   const imgY =
                     (event.offsetY - this.canvasState.translateY) /
                     this.canvasState.scale;
-                  const annotation = this.dataManager.addPoint(imgX, imgY, "positive");
-                  this.hitlUtils
-                    .addPoint(
-                      imgX / this.dataManager.currentImage.width,
-                      imgY / this.dataManager.currentImage.height,
-                      1,
-                      annotation.id,
-                    )
-                    .then(() => {
-                      this.reRender();
-                    });
+                  const annotation = this.dataManager.addPoint(imgX, imgY, "positive", this.dataManager.currentImage.width, this.dataManager.currentImage.height);
+                  this.hitlUtils.updateVectors(this.dataManager.annotations).then(() => {
+                    this.reRender();
+                  });
                   this.reRender();
                 } else if (this.annotationMode === "bbox") {
                   if (!this.bboxStart) {
@@ -1130,17 +1166,10 @@
                   const imgY =
                     (event.offsetY - this.canvasState.translateY) /
                     this.canvasState.scale;
-                  const annotation = this.dataManager.addPoint(imgX, imgY, "negative");
-                  this.hitlUtils
-                    .addPoint(
-                      imgX / this.dataManager.currentImage.width,
-                      imgY / this.dataManager.currentImage.height,
-                      0,
-                      annotation.id
-                    )
-                    .then(() => {
-                      this.reRender();
-                    });
+                  const annotation = this.dataManager.addPoint(imgX, imgY, "negative", this.dataManager.currentImage.width, this.dataManager.currentImage.height);
+                  this.hitlUtils.updateVectors(this.dataManager.annotations).then(() => {
+                    this.reRender();
+                  });
                   this.reRender();
                 } else if (this.annotationMode === "bbox") {
                   // Cancels the bounding box drawing
@@ -1363,21 +1392,11 @@
 
         // Clear all annotations for the current image
         this.clearButton.addEventListener("click", () => {
-          // clear annotations for HITL
-          const currentFile = this.dataManager.currentFile;
-          const annotations = this.dataManager.annotations[currentFile] || [];
-          annotations.forEach(ann => {
-            if (ann.type === "positive" || ann.type === "negative") {
-              this.hitlUtils.removePointById(ann.id);
-            }
-            if (this.hitlUtils.vectorIds.length === 0) {  // reset feature view
-              this.hitlUtils.setFeatsAsFeatImage(this.hitlUtils.feats);
-            } else {
-              this.hitlUtils.knnPredict();
-            }
-          });
           // clear annotations for annotation tool
           this.dataManager.clearAnnotations();
+          this.hitlUtils.updateVectors(this.dataManager.annotations).then(() => {
+            this.reRender();
+          });
           this.reRender();
         });
 
@@ -1390,23 +1409,12 @@
 
         // Undo the last annotation when undo button is clicked
         this.undoButton.addEventListener("click", () => {
-          // undo last annotation for HITL
-          const currentFile = this.dataManager.currentFile;
-          const annotations = this.dataManager.annotations[currentFile] || [];
-          if (annotations.length > 0) {
-            const lastAnn = annotations[annotations.length - 1];
-            // Only remove the KNN vector if it’s a point annotation.
-            if (lastAnn.type === "positive" || lastAnn.type === "negative") {
-              this.hitlUtils.removePointById(lastAnn.id);
-            }
-            if (this.hitlUtils.vectorIds.length === 0) {  // reset feature view
-              this.hitlUtils.setFeatsAsFeatImage(this.hitlUtils.feats);
-            } else {
-              this.hitlUtils.knnPredict();
-            }
-          }
           // undo last annotation for annotation tool
           this.dataManager.undoLastAnnotation();
+          // undo last annotation for HITL
+          this.hitlUtils.updateVectors(this.dataManager.annotations).then(() => {
+            this.reRender();
+          });
           this.reRender();
         });
 
@@ -1458,7 +1466,6 @@
             return;
           }
           console.log("Worker response received");
-          
           // Decide shape based on USE_RGB flag
           const shape = USE_RGB ? [3, 518, 518] : [384, 37, 37];
 
@@ -1466,16 +1473,14 @@
           this.hitlUtils.feats = tf.tensor(new Float32Array(e.data.feats), shape);
 
           // Visualize
-          if (this.hitlUtils.vectorIds.length === 0) {
-            this.hitlUtils.setFeatsAsFeatImage(this.hitlUtils.feats);
-          } else {
-            this.hitlUtils.knnPredict();
-          }
+          this.hitlUtils.updateVectors(this.dataManager.annotations).then(() => {
+            this.reRender();
+          });
           this.reRender();
           this.spinner.classList.add("hidden");
         };
 
-        worker.postMessage({ tensorData: resizedTensor.data.buffer, dims: resizedTensor.dims}, [resizedTensor.data.buffer]);
+        worker.postMessage({ tensorData: resizedTensor.data.buffer, dims: resizedTensor.dims }, [resizedTensor.data.buffer]);
       }
 
 
