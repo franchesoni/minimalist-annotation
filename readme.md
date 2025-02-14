@@ -96,12 +96,16 @@ Open an issue in the repository or contact [Franco Marchesoni](mailto:marchesoni
 - fix USE_RGB switch <- haven't tried dino
 - fix clicking on an image, going to another and clicking (should raise)
 - try dino
-
-# new roadmap
 - hitl dino, sync webworker with annotation tool (single image)
     - there are three cases for annotation addition / removal: before starting computing the feature map (should never happen, as feature map computation should start as soon as the image is loaded or before), during the computation, or after it. For after the computation, we have the code. We need to add the code for during the computation. Basically when a computation is done, we should look at the annotations and create the vectors accordingly (function "updateVectors"). Then whenever an annotation is added / removed we rerun the "updateVectors". This function should look at the annotations included so far, remove any extra, and see if we can include some that were not included given the feature maps available. Whenever a feature map is computed or annotations are modified we updateVectors. Then we have feature map computation which has a queue and can be stopped if the queue is modified, but this is more complex and comes later. 
     - in short, create updateVectors function that will run whenever annotations are updated or whenever a feature map is computed
-- hitl dino, sync webworker with annotation tool (many images)
+    <- seems to work for a single image 
+- avoid reloading of model <- model is now cached by js into an indexed db so it's not realoaded at every call (that's what the worker was doing). Now we have the possibility to get a new worker which will be doing the processing, destroy it and create new ones to our liking. the onnx session already does parallel execution in the background so creating more workers is not really going to speed things up (most likely the contrary). So what I will do is to have a single worker that can be paused and restarted at will, and when restarted it will get the model from the indexeddb. but what if the webworker is stopped while downloading the first model? can I download the model on the main thread ? OK so what we will do is the following: 1. load the model (async) in the main thread into Uint8, 2. have a function to create a new worker, which also sends the model to it (and the webworker has a function to save the model), 3. then have a way to make the webworker compute features and 4, have a way to stop and restart the webworker if the current feature computation is useless. 
+- hitl dino, sync webworker with annotation tool (many images) <- IN SHORT, we now load the model in the main thread, pass it to the worker when inited and kill the worker if it's working on the wrong image.
+
+
+# new roadmap
+- hitl dino, automatic computation of features for each image
 - hitl dino, model download
 - hitl dino, visualization
 - hitl dino, mask download
