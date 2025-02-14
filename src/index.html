@@ -742,7 +742,45 @@
         this.featImage = null;
         this.feats = null;
         this.vectorIds = [];
+        this.modelBuffer = null;
+        this.worker = null;
       }
+
+      async createWorker() {
+        if (!this.modelBuffer) {
+          await this.downloadModelBuffer();
+        }
+        if (this.worker) {
+          console.log('terminating worker...')
+          this.worker.terminate();
+        }
+        console.log('creating worker...')
+        this.worker = new Worker("onnxWorker.js");
+
+        return new Promise((resolve, reject) => {
+          this.worker.onmessage = (e) => {
+            if (e.data.type === "initModelDone") {
+              resolve(this.worker);
+            } else if (e.data.error) {
+              reject(new Error(e.data.error));
+            }
+          }
+          console.log('initializing worker...')
+          this.worker.postMessage({
+            type: "initModel",
+            modelBuffer: this.modelBuffer.slice(0).buffer  // copy
+          })
+        })
+      };
+
+      async downloadModelBuffer() {
+        if (!this.modelBuffer) {
+          console.log('downloading model...')
+          const response = await fetch(location.origin + "/smalldino.onnx");
+          this.modelBuffer = new Uint8Array(await response.arrayBuffer());
+        } 
+        console.log('downloaded!')
+      };
 
       async updateVectors(annotationsDict) {
         console.log("Updating vectors");
@@ -1455,9 +1493,12 @@
           518
         );
         const resizedTensor = await ort.Tensor.fromImage(resizedImageData);
-        const worker = new Worker("onnxWorker.js");
+        console.log('creating worker...')
+        await this.hitlUtils.createWorker();
+        console.log('created worker')
 
-        worker.onmessage = (e) => {
+
+        this.hitlUtils.worker.onmessage = (e) => {
           if (e.data.error) {
             console.error("Worker error:", e.data.error);
             alert("Error during inference: " + e.data.error);
@@ -1465,21 +1506,24 @@
             return;
           }
           console.log("Worker response received");
-          // Decide shape based on USE_RGB flag
-          const shape = USE_RGB ? [3, 518, 518] : [384, 37, 37];
+          if (e.data.type === "computeDone") {
+            // Decide shape based on USE_RGB flag
+            const shape = USE_RGB ? [3, 518, 518] : [384, 37, 37];
 
-          // Convert received buffer to tensor
-          this.hitlUtils.feats = tf.tensor(new Float32Array(e.data.feats), shape);
+            // Convert received buffer to tensor
+            this.hitlUtils.feats = tf.tensor(new Float32Array(e.data.feats), shape);
 
-          // Visualize
-          this.hitlUtils.updateVectors(this.dataManager.annotations).then(() => {
+            // Visualize
+            this.hitlUtils.updateVectors(this.dataManager.annotations).then(() => {
+              this.reRender();
+            });
             this.reRender();
-          });
-          this.reRender();
-          this.spinner.classList.add("hidden");
+            this.spinner.classList.add("hidden");
+          }
         };
 
-        worker.postMessage({ tensorData: resizedTensor.data.buffer, dims: resizedTensor.dims }, [resizedTensor.data.buffer]);
+        console.log('computing features...')
+        this.hitlUtils.worker.postMessage({ type: "computeFeatures", tensorData: resizedTensor.data.buffer, dims: resizedTensor.dims }, [resizedTensor.data.buffer]);
       }
 
 
