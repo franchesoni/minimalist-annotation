@@ -745,37 +745,41 @@
         this.modelBuffer = null;
         this.worker = null;
         this.workerRunning = false;
+        this.workerReady = false;
       }
 
       async restartWorker() {
+        console.log("restartWorker()...")
         // wait until modelBuffer is ready
+        this.workerReady = false;
+        this.workerRunning = true;
         if (!this.modelBuffer) {
-          console.log('waiting for modelbuffer...')
+          console.log('restartWorker() <- model is not ready, waiting...')
           while (!this.modelBuffer) {
             await new Promise((resolve) => setTimeout(resolve, 100));
           }
-          console.log('modelbuffer ready!')
+          console.log('restartWorker() <- model is ready!')
         }
         if (this.worker) {
-          console.log('terminating worker...')
-          this.worker.terminate();
-          console.log('terminated!')
+          console.log('restartWorker() <- terminating worker...')
+          await this.worker.terminate();
+          console.log('restartWorker() <- terminated!')
         }
-        console.log('creating worker...')
-        const worker = new Worker("onnxWorker.js");
+        console.log('restartWorker() <- creating worker...')
+        this.worker = new Worker("onnxWorker.js");
 
         return new Promise((resolve, reject) => {
-          worker.onmessage = (e) => {
+          this.worker.onmessage = (e) => {
             if (e.data.type === "initModelDone") {
-              console.log('worker initialized!')
-              this.worker = worker;  // do not assign until initialized
+              console.log('restartWorker() <- worker created!')
+              this.workerReady = true;
+              this.workerRunning = false;
               resolve(this.worker);
             } else if (e.data.error) {
               reject(new Error(e.data.error));
             }
           }
-          console.log('initializing worker...')
-          worker.postMessage({
+          this.worker.postMessage({
             type: "initModel",
             modelBuffer: this.modelBuffer.slice(0).buffer  // copy
           })
@@ -784,15 +788,15 @@
 
       async downloadModelBuffer() {
         if (!this.modelBuffer) {
-          console.log('downloading model...')
+          console.log('downloadModelBuffer() <- downloading model...')
           const response = await fetch(location.origin + "/smalldino.onnx");
           this.modelBuffer = new Uint8Array(await response.arrayBuffer());
         }
-        console.log('downloaded!')
+        console.log('downloadModelBuffer() <- downloaded model!')
       };
 
       async updateVectors(annotationsDict) {
-        console.log("Updating vectors");
+        console.log("updateVectors()...");
         let updated = false;
         const vectorsIdWithoutAnn = new Set(this.vectorIds);
 
@@ -831,12 +835,12 @@
         } else if (this.feats) {
           this.setFeatsAsFeatImage(this.feats);
         }
-        console.log("Updated vectors");
+        console.log("updateVectors() <- done!");
       }
 
 
       async addPoint(xPct, yPct, label, id) {
-        console.log('Adding point to HITL module');
+        console.log('hitlUtils.addPoint()...');
         if (!this.feats) {
           alert(
             "Please generate the features before clicking, I'll refresh the page"
@@ -862,7 +866,7 @@
         this.vectors.push(vector);
         this.labels.push(label);
         this.vectorIds.push(id);
-        console.log("Added point with id", id);
+        console.log("hitlUtils.addPoint() <- added point with id", id);
       }
 
       removePointById(id) {
@@ -875,7 +879,7 @@
       }
 
       async knnPredict() {
-        console.log("Predicting");
+        console.log("knnPredict()...");
         const P = this.vectors.length;
         let D, S
         if (!USE_RGB) {
@@ -1334,7 +1338,7 @@
         // Unhide canvas container and any extra canvas elements
         this.canvasState.unhide();
 
-        this.runButton.classList.remove("hidden");
+        // this.runButton.classList.remove("hidden");
       }
 
       changeImage() {
@@ -1348,13 +1352,16 @@
           this.hitlUtils.featImage
         );
         this.reRender();
-        if (this.hitlUtils.workerRunning) {
-          console.log("restarting worker")
+        // HITL Logic
+        if (this.hitlUtils.workerRunning) {  // if running and change image, reset worker
           this.hitlUtils.restartWorker().then(() => {
-            this.hitlUtils.workerRunning = false;
             this.spinner.classList.add("hidden");
-            console.log("restarted worker")
+            this.runForward();  // run always after restarting worker
           });
+        } else if (this.hitlUtils.workerReady) {
+          this.runForward();  // run if worker is ready
+        } else if (this.hitlUtils.worker) {
+          console.log("THIS SHOULDNT HAPPEN")
         }
       }
 
@@ -1371,8 +1378,8 @@
             this.hideUnhide();
             this.changeImage();
             // Download model buffer and start webworker
-            this.hitlUtils.downloadModelBuffer();
-            this.hitlUtils.restartWorker();
+            this.spinner.classList.remove("hidden")
+            this.hitlUtils.downloadModelBuffer().then(() => this.hitlUtils.restartWorker().then(() => this.runForward()));
           } else {
             alert("No images found in the selected folder.");
           }
@@ -1482,10 +1489,15 @@
 
         // Run inference
         this.runButton.addEventListener("click", async () => {
-          this.spinner.classList.remove("hidden");
-          await new Promise((resolve) => setTimeout(resolve, 0)); // needed to show spinner
-          await this.computeFeatures();
+          runForward();
         });
+      }
+
+      async runForward() {
+        console.log("runForward()...")
+        this.spinner.classList.remove("hidden");
+        await new Promise((resolve) => setTimeout(resolve, 0)); // needed to show spinner
+        await this.computeFeatures();
       }
 
       reRender() {
@@ -1504,23 +1516,22 @@
           return;
         }
         if (this.hitlUtils.workerRunning) {
-          console.log('worker running already, skipping computeFeatures()');
+          console.log('computeFeatures() <- worker running already, skipping function');
           return
         } else {
-          console.log("Running feature visualization...");
+          console.log("computeFeatures()...");
         }
 
         // Resize image
-        console.log("  - resizing image...");
         const resizedImageData = this.hitlUtils.resizeImageData(
           this.dataManager.currentImage,
           518,
           518
         );
         const resizedTensor = await ort.Tensor.fromImage(resizedImageData);
-        if (!this.hitlUtils.worker) {
-          console.log("worker is not ready, waiting...");
-          while (!this.hitlUtils.worker) {
+        if (!this.hitlUtils.workerReady) {
+          console.log("computeFeatures() <- worker is not ready, waiting...");
+          while (!this.hitlUtils.workerReady) {
             await new Promise((resolve) => setTimeout(resolve, 100));
           }
         }
@@ -1533,7 +1544,7 @@
             this.spinner.classList.add("hidden");
             return;
           }
-          console.log("Worker response received");
+          console.log("computeFeatures() <- worker response received");
           if (e.data.type === "computeDone") {
             // Decide shape based on USE_RGB flag
             const shape = USE_RGB ? [3, 518, 518] : [384, 37, 37];
@@ -1551,7 +1562,7 @@
           }
         };
 
-        console.log('computing features...')
+        console.log('computeFeatures() <- send message to worker')
         this.hitlUtils.workerRunning = true;
         this.hitlUtils.worker.postMessage({ type: "computeFeatures", tensorData: resizedTensor.data.buffer, dims: resizedTensor.dims }, [resizedTensor.data.buffer]);
       }
