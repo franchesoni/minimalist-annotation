@@ -830,10 +830,12 @@
         }
 
         // Update predictions if needed
-        if (this.vectorIds.length > 0) {
-          await this.knnPredict();
-        } else if (this.feats) {
-          this.setFeatsAsFeatImage(this.feats);
+        if (this.feats) {
+          if (this.vectorIds.length > 0) {
+            await this.knnPredict();
+          } else {
+            this.setFeatsAsFeatImage(this.feats);
+          }
         }
         console.log("updateVectors() <- done!");
       }
