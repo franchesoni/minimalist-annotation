@@ -852,14 +852,14 @@
         }
         let col, row, vector
         if (!USE_RGB) {
-          col = Math.round(xPct * 37); // assume 518 side
-          row = Math.round(yPct * 37);
+          col = Math.floor(xPct * 37); // assume 37 side
+          row = Math.floor(yPct * 37);
           vector = this.feats
             .slice([0, row, col], [384, 1, 1])
             .reshape([384]);
         } else {
-          col = Math.round(xPct * 518); // assume 518 side
-          row = Math.round(yPct * 518);
+          col = Math.floor(xPct * 518); // assume 518 side
+          row = Math.floor(yPct * 518);
           vector = this.feats
             .slice([0, row, col], [3, 1, 1])
             .reshape([3]);
